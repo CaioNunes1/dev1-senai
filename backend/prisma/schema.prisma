@@ -1,0 +1,10 @@
+// Os modelos das sete tabelas são adicionados na Etapa 2 (docs/data-model.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
