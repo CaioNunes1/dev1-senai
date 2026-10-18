@@ -9,3 +9,8 @@ export type Cents = number;
 export function centsToNumber(cents: Cents): number {
   return cents / 100;
 }
+
+/** Valor em moedas com 2 casas e vírgula decimal, para mensagens (5040 → "50,40"). */
+export function formatMoney(cents: Cents): string {
+  return centsToNumber(cents).toFixed(2).replace('.', ',');
+}
