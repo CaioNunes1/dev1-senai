@@ -9,6 +9,7 @@ import { formatMoney } from '../../shared/lib/format';
 import { cx } from '../../shared/lib/cx';
 import type { Player } from './api';
 import { ConditionBadge } from './ConditionBadge';
+import { PlayerActionsMenu, type PlayerAction } from './PlayerActionsMenu';
 import { PlayerAvatar } from './PlayerAvatar';
 import { POSITION_LABELS } from './player-labels';
 
@@ -33,6 +34,8 @@ type PlayersTableProps = {
   error: ApiError | undefined;
   onRetry: () => void;
   empty: ReactNode;
+  onAction: (action: PlayerAction, player: Player) => void;
+  highlightedId: number | undefined;
 };
 
 /** Tabela de jogadores com as 9 colunas obrigatórias, na ordem e no estilo do frame J01. */
@@ -43,6 +46,8 @@ export function PlayersTable({
   error,
   onRetry,
   empty,
+  onAction,
+  highlightedId,
 }: PlayersTableProps) {
   const columns: Column<Player>[] = [
     {
@@ -125,6 +130,14 @@ export function PlayersTable({
       widthClass: 'w-44',
       cell: (player) => <ClubCell clubId={player.club_id} clubsById={clubsById} />,
     },
+    {
+      key: 'actions',
+      header: 'Ações',
+      headerHidden: true,
+      align: 'right',
+      widthClass: 'w-14',
+      cell: (player) => <PlayerActionsMenu player={player} onAction={onAction} />,
+    },
   ];
 
   return (
@@ -139,6 +152,7 @@ export function PlayersTable({
       errorTitle="Não foi possível carregar os jogadores"
       onRetry={onRetry}
       empty={empty}
+      isRowHighlighted={(player) => player.id === highlightedId}
     />
   );
 }

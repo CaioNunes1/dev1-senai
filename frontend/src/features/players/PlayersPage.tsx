@@ -1,18 +1,25 @@
-import { ArrowLeft, SearchX, Users, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { ArrowLeft, Plus, SearchX, Users, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import type { ApiError } from '../../shared/api/http-client';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { useDataRefresh } from '../../shared/hooks/data-refresh';
 import { useClubList } from '../clubs/clubs-context';
 import type { PageMeta } from './api';
+import { PlayerDialogs, type PlayerDialogState } from './PlayerDialogs';
 import { PlayersFilters } from './PlayersFilters';
 import { PlayersPagination } from './PlayersPagination';
 import { PlayersTable } from './PlayersTable';
 import { PlayersTableToolbar } from './PlayersTableToolbar';
 import { usePlayerList } from './use-player-list';
 
-/** Tela de jogadores (Figma J01–J04, J15 e estados E01–E03), integrada a `GET /players`. */
+/**
+ * Tela de jogadores (Figma J01–J16 e estados E01–E03): lista por `GET /players` e as ações
+ * de cadastro, edição, condição e exclusão. Depois de cada ação gravada, `refreshAll` recarrega
+ * as consultas pela API, mantendo busca, filtros, ordenação e página.
+ */
 export function PlayersPage() {
   const list = usePlayerList();
   const clubs = useClubList();
@@ -21,6 +28,23 @@ export function PlayersPage() {
     [clubs.data],
   );
   const { data, error, isLoading, retry } = list.players;
+  const { refreshAll } = useDataRefresh();
+  const [dialog, setDialog] = useState<PlayerDialogState | null>(null);
+  const [highlightedId, setHighlightedId] = useState<number>();
+
+  const handleDeleted = () => {
+    const onlyRowOfLastPage = data?.data.length === 1 && list.page > 1;
+    if (onlyRowOfLastPage) {
+      list.goToPage(list.page - 1);
+    }
+    refreshAll();
+  };
+
+  const handleRefused = (refusal: ApiError) => {
+    if (refusal.status === 404 || refusal.status === 409) {
+      refreshAll();
+    }
+  };
 
   return (
     <>
@@ -28,6 +52,12 @@ export function PlayersPage() {
         icon={Users}
         title="Jogadores"
         description="Cadastre jogadores, acompanhe os indicadores e compre os que estão livres."
+        actions={
+          <Button onClick={() => setDialog({ kind: 'create' })}>
+            <Plus aria-hidden="true" />
+            Novo jogador
+          </Button>
+        }
       />
       <PlayersFilters
         filters={list.filters}
@@ -56,6 +86,8 @@ export function PlayersPage() {
           isLoading={isLoading}
           error={error}
           onRetry={retry}
+          onAction={(kind, player) => setDialog({ kind, player })}
+          highlightedId={highlightedId}
           empty={
             <EmptyPlayers
               meta={data?.meta}
@@ -78,6 +110,16 @@ export function PlayersPage() {
         Overall e valor de mercado são calculados pela API a cada consulta. A busca ignora
         maiúsculas, minúsculas e acentos.
       </p>
+      <PlayerDialogs
+        dialog={dialog}
+        onDialogChange={setDialog}
+        onPlayerSaved={(player) => {
+          setHighlightedId(player.id);
+          refreshAll();
+        }}
+        onPlayerDeleted={handleDeleted}
+        onRefused={handleRefused}
+      />
     </>
   );
 }

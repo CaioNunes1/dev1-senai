@@ -1,3 +1,4 @@
+import { countCharacters } from '../../shared/lib/text';
 import type { Condition, PlayerListQuery, PlayerSort, Position } from './api';
 
 const PAGE_SIZE = 10;
@@ -25,10 +26,6 @@ export const INITIAL_FILTERS: PlayerFilters = { age: {}, value: {}, sort: 'name'
 /** Mesma normalização da API para o `search` (V4): sem espaços nas pontas e espaços repetidos. */
 export function normalizeSearch(text: string): string {
   return text.trim().replace(/\s+/g, ' ');
-}
-
-export function countCharacters(text: string): number {
-  return [...text].length;
 }
 
 /** Monta os query params de `GET /players`, sem enviar parâmetros vazios. */

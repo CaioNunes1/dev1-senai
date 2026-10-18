@@ -1,10 +1,8 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AppRoutes } from '../../app/AppRoutes';
-import { DataRefreshProvider } from '../../shared/hooks/DataRefreshProvider';
 import { jsonResponse, mockApi, requestsTo, urlOf, type FetchMock } from '../../test/fetch-mock';
+import { renderApp } from '../../test/render-app';
 import type { Player, PlayerPage } from './api';
 
 const CLUBS = [
@@ -72,13 +70,7 @@ function lastPlayersQuery(fetchMock: FetchMock): Record<string, string> {
 }
 
 function renderPlayers() {
-  return render(
-    <MemoryRouter initialEntries={['/players']}>
-      <DataRefreshProvider>
-        <AppRoutes />
-      </DataRefreshProvider>
-    </MemoryRouter>,
-  );
+  return renderApp('/players');
 }
 
 function table() {
@@ -95,7 +87,7 @@ describe('PlayersPage — listagem', () => {
     vi.unstubAllGlobals();
   });
 
-  it('mostra as 9 colunas obrigatórias com os valores da API, sem recalcular', async () => {
+  it('mostra as 9 colunas obrigatórias (e as ações) com os valores da API, sem recalcular', async () => {
     mockPlayersApi(() =>
       jsonResponse(
         pageOf([
@@ -134,6 +126,7 @@ describe('PlayersPage — listagem', () => {
       'Valor base',
       'Valor de mercado',
       'Clube',
+      'Ações',
     ]);
     const cells = (row: HTMLElement) =>
       within(row)
@@ -149,6 +142,7 @@ describe('PlayersPage — listagem', () => {
       '40,00',
       '37,00',
       'Livre',
+      '',
     ]);
     expect(cells(rows[2])).toEqual([
       'JSJoão SilvaAtacante',
@@ -160,6 +154,7 @@ describe('PlayersPage — listagem', () => {
       '52,00',
       '46,80',
       'AGUÁguias FC',
+      '',
     ]);
     expect(table().getByRole('link', { name: 'Águias FC' })).toHaveAttribute('href', '/clubs/2');
   });

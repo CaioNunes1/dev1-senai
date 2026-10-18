@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useApiQuery } from '../../shared/hooks/use-api-query';
 import { useDebouncedValue } from '../../shared/hooks/use-debounced-value';
+import { countCharacters } from '../../shared/lib/text';
 import { listPlayers } from './api';
 import {
   buildPlayerQuery,
-  countCharacters,
   hasActiveFilters,
   INITIAL_FILTERS,
   normalizeSearch,
