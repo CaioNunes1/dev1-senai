@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-export type DataRefresh = {
+type DataRefresh = {
   /** Muda a cada pedido de atualização; as consultas abertas recarregam quando ela muda. */
   version: number;
   refreshAll: () => void;

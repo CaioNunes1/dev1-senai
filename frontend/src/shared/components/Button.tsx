@@ -11,6 +11,7 @@ const VARIANT_CLASSES = {
 const SIZE_CLASSES = {
   default: 'h-9 px-4 has-[>svg]:px-3',
   sm: 'h-8 px-3',
+  icon: 'size-9',
   iconSm: 'size-8',
 } as const;
 
