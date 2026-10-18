@@ -2,8 +2,9 @@
 
 ## Estado atual
 
-- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa (18/10/2026).
-- **Próxima etapa:** 4.2 (consulta e listagem de clubes), aguardando aprovação.
+- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda (18/10/2026).
+- **Backend:** 11 das 19 rotas do enunciado prontas. Faltam histórico e CSV (RN17–RN18), escalação (RN19), partidas e classificação (RN20–RN21).
+- **Próxima etapa sugerida:** fundação do frontend (prazo dos dias de push em `frontend/`); depois histórico, liga e as telas correspondentes.
 - **⚠️ Frontend não iniciado:** o barema exige push em ≥3 dias distintos com commits em `frontend/`; o prazo é 23/10.
 - **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Push em 17/10: commit `845f573` (Etapas 0, 1 e 3.1 juntas). Etapas 2, 4.1 e 3.2–3.4 ainda não commitadas.
 
@@ -31,7 +32,26 @@
 | 3.3 | Edição, condição e exclusão de jogadores | ✅ 18/10 | ver "Etapas 3.2–3.4" | DOENTE sai da escalação na mesma transação |
 | 3.4 | Listagem de jogadores (RN07) | ✅ 18/10 | ver "Etapas 3.2–3.4" | ADR-004 implementada |
 | 4.1 | Cadastro de clubes (RN10) | ✅ | 259 unitários + 70 e2e passando (88 + 42 novos) | ADR-013, ADR-014, ADR-015 |
-| 4.2 | Consulta e listagem de clubes | ⏳ aguardando aprovação | | |
+| 4.2 | Consulta e listagem de clubes | ✅ 18/10 | ver "Mercado" | `GET /clubs`, `GET /clubs/{id}` |
+| — | Compra (RN12–RN14) | ✅ 18/10 | ver "Mercado" | `POST /players/{id}/buy` |
+| 4.3 | Elenco com contratos (RN11, RN15) | ✅ 18/10 | ver "Mercado" | dias e % de multa na consulta |
+| — | Venda (RN15–RN16) | ✅ 18/10 | ver "Mercado" | `POST /players/{id}/sell` |
+
+### 4.2, compra, 4.3 e venda — o que foi validado (18/10/2026)
+
+| Verificação | Resultado |
+| --- | --- |
+| `npm test` | 23 suítes, 522 testes ok (novos: datas RN01, taxa e limite RN13, janela da fidelidade, dias/percentual/multa RN15, comissão e acerto RN16, ordem do elenco, ordenação de clubes) |
+| `npm run test:e2e` | 4 suítes, 227 testes ok (56 novos em `test/market.e2e-spec.ts`) |
+| Exemplos oficiais pela API, com relógio fixo | 2.3.1 (compra: 37,00 + 1,85; caixa 261,15), 2.2.2 (clube: patrimônio 298,15; 120 dias; 10%), 2.3.2 (venda: 117 dias; multa 4,00; comissão 0,30; caixa 296,85; RESCINDIDO), resposta por resposta |
+| Tabelas oficiais pela API | RN13 (5 linhas), RN15 (7 faixas, inclusive limites de 30/180 dias e 1 minuto), RN16 (prejuízo; multa limitada a 10,00 com comissão 2,00) |
+| Recusas de compra | 15 formatos inválidos → 400 sem gravar (inclusive fidelidade igual ao momento e 1.095 dias + 1 min); 404 jogador/clube/excluído; 409 com clube, acima de 50%, 13º do elenco, recompra |
+| Concorrência | dois clubes comprando o mesmo jogador ao mesmo tempo → uma compra só |
+| Mutações | limite de 50% sem aceitar igual, dias sem arredondar para cima, comissão sobre prejuízo, venda sem tirar da escalação, recompra liberada: todas detectadas; código restaurado |
+| Lint, formatação, build | ok |
+| API real (somente leitura) | 11 rotas no Swagger; 400/404 com `message` |
+
+Fixtures: alguns testes ajustam `valor_base` ou o caixa direto no banco para obter valores exatos das tabelas oficiais (ex.: valor de mercado 47,62). O cálculo do valor base já é coberto pela RN06.
 
 ### Etapas 3.2–3.4 — o que foi validado (18/10/2026)
 
@@ -131,3 +151,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 17/10/2026 | Claude Code (Claude Opus) | `backend/prisma/schema.prisma`, migration inicial | modelagem das 7 tabelas com `@map`; consultas SQL que conferem estrutura e unicidades | em revisão pelo candidato |
 | 17/10/2026 | Claude Code (Claude Opus) | `backend/src/clubs/`, `common/domain/text.ts`, `common/validation/`, `prisma/decimal.ts`, `test/` | `POST /clubs` (RN10), regras de nome e sigla, lock de criação, banco de teste e e2e com concorrência | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) | `backend/src/players/` (dto, controller, service, mapper, domain/player-listing), `common/domain/pagination.ts`, `common/validation/query-params.ts`, `test/players.e2e-spec.ts` | endpoints de jogadores (RN06–RN09, RN07), parser estrito de query params, testes com os exemplos oficiais e checagem por mutação | em revisão pelo candidato |
+| 18/10/2026 | Claude Code (Claude Opus) | `backend/src/market/`, `clubs/` (GET), `common/clock/`, `common/domain/datetime.ts`, `league/lineup-membership.ts`, `test/market.e2e-spec.ts` | compra, venda, consulta de clubes com contratos, relógio injetável e testes com os exemplos oficiais em instante fixo | em revisão pelo candidato |

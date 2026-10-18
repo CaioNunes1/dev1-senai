@@ -91,3 +91,10 @@ Notas das Etapas 3.2–3.4:
 - Valor de mercado de um jogador gravado: sempre `marketValueOf(player)` (`players/player.mapper.ts`), que é a única ponte para `calculateMarketValue`.
 - Dados de teste com empates devem ter ids em ordem **contrária** à dos nomes, senão o desempate por nome não é verificado (achado por mutação em 18/10).
 - Testes e2e completos levam ~1,5 min; rodar em sequência, nunca com outro e2e em paralelo.
+
+Notas de 4.2, compra, 4.3 e venda:
+- "Agora" sempre por `Clock` (injetado); nunca `new Date()` em regra de negócio. Nos e2e, `clock.setBrasilia('AAAA-MM-DDTHH:MM-03:00')`.
+- Travas: sempre jogador antes de clube (`lockActivePlayer` → `lockClub`), para não haver deadlock entre operações.
+- Datas na resposta: `formatBrasiliaDateTime`; entrada: `parseBrasiliaDateTime` (devolve `undefined` se inválida).
+- Compra e venda respondem **200** (`@HttpCode(HttpStatus.OK)`), não 201.
+- Dias restantes e % de multa só por `market/domain/loyalty-penalty.ts` (venda e consulta do clube usam a mesma função).

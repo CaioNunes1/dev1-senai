@@ -114,8 +114,10 @@ Tabela, paginação, filtros, ordenação, cadastro/edição/condição com vali
 | Subetapa | Escopo | Situação |
 | --- | --- | --- |
 | 4.1 | `POST /clubs`: RN10 (nome, sigla, unicidade, 20 clubes, caixa 300,00) | ✅ 17/10/2026 |
-| 4.2 | `GET /clubs` (sort `name`, `net_worth_asc`, `net_worth_desc`) e `GET /clubs/{id}`; valor do elenco e patrimônio calculados | aguardando aprovação |
-| 4.3 | Elenco na ordem da RN11, contrato de cada jogador (fim da fidelidade, dias restantes, % de multa) | depende dos jogadores (3.2) e da compra |
+| 4.2 | `GET /clubs` (sort `name`, `net_worth_asc`, `net_worth_desc`) e `GET /clubs/{id}`; valor do elenco e patrimônio calculados | ✅ 18/10/2026 |
+| 4.3 | Elenco na ordem da RN11, contrato de cada jogador (fim da fidelidade, dias restantes, % de multa) | ✅ 18/10/2026 (com a compra) |
+
+Compra (Etapa 9) e venda (Etapa 10) também concluídas no backend em 18/10/2026; as telas correspondentes estão na Etapa 11.
 
 As telas de clubes (frontend) continuam previstas aqui, em commits separados.
 

@@ -75,8 +75,9 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
 
 ## ADR-008 — Relógio injetável
 
-- **Status:** Aceita (15/10/2026)
+- **Status:** Aceita (15/10/2026); implementada em 18/10/2026
 - **Decisão:** provider `Clock` com `now()`; testes fixam o instante.
+- **Implementação:** `common/clock/` (`Clock` abstrato, `SystemClock`, `ClockModule` global). Os e2e trocam o provider por `TestClock` (`test/test-clock.ts`), que começa em 02/11/2026 10:15 (−03:00) e permite `setBrasilia()`. Datas gravadas por operações (contrato, transação, exclusão) vêm do `Clock`, não do `now()` do banco, para que "o instante exato do servidor na operação" (RN01) seja o mesmo em toda a operação.
 - **Consequências:** RN15 e o limite de 1.095 dias testáveis de forma determinística sem mocks globais de `Date`.
 
 ## ADR-009 — Frontend sem biblioteca de cache de dados

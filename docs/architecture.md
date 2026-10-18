@@ -51,8 +51,12 @@ backend/src/
 │   ├── domain/                 club.rules.ts (20 clubes, caixa inicial, chave do nome), acronym.ts (4.1 ✅); club-ordering.ts (4.2)
 │   ├── dto/                    create-club.dto.ts, club-input.rules.ts, club-response.dto.ts
 │   ├── clubs.controller.ts  clubs.service.ts  club.mapper.ts  clubs.module.ts
-├── market/                     RN12–RN18 (compra, venda, contratos, histórico, CSV)
-│   ├── domain/                 purchase.ts (taxa, limite), loyalty-penalty.ts (dias + %), sale.ts (lucro, comissão, crédito), transactions-csv.ts
+├── market/                     RN12–RN18 (compra ✅, venda ✅; histórico e CSV pendentes)
+│   ├── domain/                 purchase.ts (taxa, limite 50%, janela da fidelidade), loyalty-penalty.ts (dias + % + multa),
+│   │                           sale.ts (lucro, comissão, crédito, situação do contrato); transactions-csv.ts (pendente)
+│   ├── dto/                    buy-player.dto.ts, market-response.dto.ts
+│   ├── market.controller.ts (POST /players/{id}/buy e /sell)  market.service.ts  transaction.mapper.ts
+├── league/                     lineup-membership.ts (saída da escalação, usada na venda e na condição DOENTE); RN19–RN21 pendentes
 ├── league/                     RN19–RN21 (escalação, partidas, classificação)
 │   ├── domain/                 formation.ts, match-engine.ts, standings.ts
 ```
