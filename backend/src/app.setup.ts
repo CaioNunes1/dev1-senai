@@ -2,12 +2,10 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/http/all-exceptions.filter';
+import { API_DOCS_PATH, API_PREFIX } from './common/http/api.constants';
 import { PlainObjectBodyPipe } from './common/http/plain-object-body.pipe';
 import { StrictValidationPipe } from './common/validation/strict-validation.pipe';
 import { Environment } from './config/environment';
-
-export const API_PREFIX = 'api/v1';
-export const API_DOCS_PATH = 'api/docs';
 
 /**
  * Configuração transversal da API, compartilhada pelo `main.ts` e pelos testes e2e

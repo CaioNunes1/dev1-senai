@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { API_DOCS_PATH, API_PREFIX, configureApp } from './app.setup';
+import { configureApp } from './app.setup';
 import { AppModule } from './app.module';
+import { API_DOCS_PATH, API_PREFIX } from './common/http/api.constants';
 import { Environment } from './config/environment';
 
 async function bootstrap(): Promise<void> {
