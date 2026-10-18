@@ -1,10 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DataRefreshProvider } from '../../shared/hooks/DataRefreshProvider';
 import { jsonResponse, mockApi, requestsTo } from '../../test/fetch-mock';
-import { AppRoutes } from '../AppRoutes';
+import { renderApp } from '../../test/render-app';
 
 const CLUBS = [
   { id: 2, name: 'Águias FC', acronym: 'AGU', cash: 51.58, squad_value: 222.68, net_worth: 274.26 },
@@ -24,16 +22,6 @@ function mockClubsApi(...clubsResponses: Array<() => Response>) {
     }
     return jsonResponse(EMPTY_PAGE);
   });
-}
-
-function renderApp(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <DataRefreshProvider>
-        <AppRoutes />
-      </DataRefreshProvider>
-    </MemoryRouter>,
-  );
 }
 
 function breadcrumb() {

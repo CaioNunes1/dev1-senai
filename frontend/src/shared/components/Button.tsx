@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import { cx } from '../lib/cx';
 
 /** Variantes e tamanhos do componente Button do Figma (02 · Componentes, nó 6:509). */
@@ -6,6 +6,8 @@ const VARIANT_CLASSES = {
   primary: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary-hover',
   outline: 'border border-border bg-background text-foreground shadow-xs hover:bg-accent',
   ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
+  destructive:
+    'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive-soft-foreground',
 } as const;
 
 const SIZE_CLASSES = {
@@ -15,7 +17,7 @@ const SIZE_CLASSES = {
   iconSm: 'size-8',
 } as const;
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonProps = ComponentProps<'button'> & {
   variant?: keyof typeof VARIANT_CLASSES;
   size?: keyof typeof SIZE_CLASSES;
 };

@@ -1,13 +1,13 @@
 import { BrowserRouter } from 'react-router';
-import { DataRefreshProvider } from '../shared/hooks/DataRefreshProvider';
+import { AppProviders } from './AppProviders';
 import { AppRoutes } from './AppRoutes';
 
 export function App() {
   return (
     <BrowserRouter>
-      <DataRefreshProvider>
+      <AppProviders>
         <AppRoutes />
-      </DataRefreshProvider>
+      </AppProviders>
     </BrowserRouter>
   );
 }

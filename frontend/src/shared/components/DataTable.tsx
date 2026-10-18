@@ -8,6 +8,8 @@ import { EmptyState } from './EmptyState';
 export type Column<T> = {
   key: string;
   header: string;
+  /** Cabeçalho só para leitores de tela (ex.: coluna de ações). */
+  headerHidden?: boolean;
   /** Números e valores alinhados à direita (padrão do Figma). */
   align?: 'left' | 'right';
   /** Largura fixa da coluna; sem ela, a coluna ocupa o espaço livre. */
@@ -28,6 +30,8 @@ type DataTableProps<T> = {
   /** Conteúdo mostrado quando a API devolve a lista vazia. */
   empty: ReactNode;
   skeletonRows?: number;
+  /** Destaque de uma linha (ex.: a recém-criada ou alterada, Figma J07/J11). */
+  isRowHighlighted?: (row: T) => boolean;
 };
 
 /**
@@ -47,6 +51,7 @@ export function DataTable<T>({
   onRetry,
   empty,
   skeletonRows = 10,
+  isRowHighlighted,
 }: DataTableProps<T>) {
   if (error) {
     return (
@@ -104,7 +109,11 @@ export function DataTable<T>({
                     column.widthClass,
                   )}
                 >
-                  {column.header}
+                  {column.headerHidden ? (
+                    <span className="sr-only">{column.header}</span>
+                  ) : (
+                    column.header
+                  )}
                 </th>
               ))}
             </tr>
@@ -130,7 +139,13 @@ export function DataTable<T>({
                   </tr>
                 ))
               : rows.map((row) => (
-                  <tr key={rowKey(row)} className="h-14 border-b border-border last:border-0">
+                  <tr
+                    key={rowKey(row)}
+                    className={cx(
+                      'h-14 border-b border-border last:border-0',
+                      isRowHighlighted?.(row) && 'bg-primary-soft',
+                    )}
+                  >
                     {columns.map((column) => (
                       <td
                         key={column.key}
