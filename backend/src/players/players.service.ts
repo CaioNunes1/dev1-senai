@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Player, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { CLUB_NOT_FOUND } from '../clubs/club-locks';
+import { Clock } from '../common/clock/clock';
 import { Page, paginate } from '../common/domain/pagination';
 import { BusinessRuleError, ResourceNotFoundError } from '../common/errors/domain-errors';
 import { centsToDecimal } from '../prisma/decimal';
+import { removeFromLineup } from '../league/lineup-membership';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateBaseValue } from './domain/base-value';
 import { canChangeCondition, leavesLineup } from './domain/condition-transition';
@@ -13,13 +16,15 @@ import { PlayerListQuery } from './dto/player-list-query';
 import { PlayerResponse } from './dto/player-response.dto';
 import { UpdateConditionDto } from './dto/update-condition.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
+import { lockActivePlayer, PLAYER_NOT_FOUND } from './player-locks';
 import { marketValueOf, toPlayerResponse } from './player.mapper';
-
-const PLAYER_NOT_FOUND = 'Jogador não encontrado.';
 
 @Injectable()
 export class PlayersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: Clock,
+  ) {}
 
   /** RN06: o valor base é calculado uma única vez, no cadastro, e gravado. */
   async create(input: CreatePlayerDto): Promise<PlayerResponse> {
@@ -59,7 +64,7 @@ export class PlayersService {
   /** RN08: muda só nome, posição, agilidade e idade; indicadores e valor base continuam. */
   async update(id: number, input: UpdatePlayerDto): Promise<PlayerResponse> {
     const player = await this.prisma.$transaction(async (tx) => {
-      const current = await this.lockActivePlayer(tx, id);
+      const current = await lockActivePlayer(tx, id);
       if (current.clubId !== null && input.position !== current.position) {
         throw new BusinessRuleError('Jogador com clube não pode mudar de posição.');
       }
@@ -87,7 +92,7 @@ export class PlayersService {
    */
   async changeCondition(id: number, input: UpdateConditionDto): Promise<PlayerResponse> {
     const player = await this.prisma.$transaction(async (tx) => {
-      const current = await this.lockActivePlayer(tx, id);
+      const current = await lockActivePlayer(tx, id);
       if (current.condition === input.condition) {
         return current;
       }
@@ -97,7 +102,7 @@ export class PlayersService {
         );
       }
       if (leavesLineup(input.condition)) {
-        await tx.lineupSlot.deleteMany({ where: { playerId: id } });
+        await removeFromLineup(tx, id);
       }
       return tx.player.update({ where: { id }, data: { condition: input.condition } });
     });
@@ -107,13 +112,13 @@ export class PlayersService {
   /** RN09: exclusão lógica, só de jogador livre; nada é apagado do banco. */
   async remove(id: number): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const current = await this.lockActivePlayer(tx, id);
+      const current = await lockActivePlayer(tx, id);
       if (current.clubId !== null) {
         throw new BusinessRuleError(
           'Só jogador livre pode ser excluído; este jogador está num clube.',
         );
       }
-      await tx.player.update({ where: { id }, data: { deletedAt: new Date() } });
+      await tx.player.update({ where: { id }, data: { deletedAt: this.clock.now() } });
     });
   }
 
@@ -153,17 +158,7 @@ export class PlayersService {
 
   private async ensureClubExists(clubId: number): Promise<void> {
     if (!(await this.prisma.club.findUnique({ where: { id: clubId }, select: { id: true } }))) {
-      throw new ResourceNotFoundError('Clube não encontrado.');
+      throw new ResourceNotFoundError(CLUB_NOT_FOUND);
     }
-  }
-
-  /** Trava a linha do jogador ativo até o fim da transação; excluído conta como inexistente. */
-  private async lockActivePlayer(tx: Prisma.TransactionClient, id: number): Promise<Player> {
-    const locked = await tx.$queryRaw<{ id: number }[]>`
-      SELECT id FROM jogadores WHERE id = ${id} AND excluido_em IS NULL FOR UPDATE`;
-    if (locked.length === 0) {
-      throw new ResourceNotFoundError(PLAYER_NOT_FOUND);
-    }
-    return tx.player.findUniqueOrThrow({ where: { id } });
   }
 }

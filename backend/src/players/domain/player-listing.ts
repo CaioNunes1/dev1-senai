@@ -1,6 +1,7 @@
 import { Cents } from '../../common/domain/money';
 import { compareNames, includesIgnoringCaseAndAccents } from '../../common/domain/text';
-import { Position, POSITIONS } from './player.types';
+import { Position } from './player.types';
+import { comparePositions } from './roster-order';
 
 export const PLAYER_SORT_OPTIONS = [
   'name',
@@ -36,8 +37,7 @@ const COMPARATORS: Record<PlayerSortOption, Comparator> = {
   value_desc: (first, second) => second.marketValue - first.marketValue,
   age_asc: (first, second) => first.age - second.age,
   age_desc: (first, second) => second.age - first.age,
-  position: (first, second) =>
-    POSITIONS.indexOf(first.position) - POSITIONS.indexOf(second.position),
+  position: (first, second) => comparePositions(first.position, second.position),
 };
 
 /** Desempate de qualquer ordenação: nome e depois id crescente (RN07). */
