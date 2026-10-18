@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
+import { ClubsContext } from '../../features/clubs/clubs-context';
 import { useClubs } from '../../features/clubs/use-clubs';
 import { useDataRefresh } from '../../shared/hooks/data-refresh';
 import { breadcrumbFor } from './navigation';
@@ -50,39 +51,41 @@ export function AppLayout() {
   const closeMobileSidebar = () => setMobileOpen(false);
 
   return (
-    <div className="flex h-dvh bg-sidebar">
-      <div className="hidden lg:flex">
-        <Sidebar id={SIDEBAR_ID} collapsed={collapsed} clubs={clubs} />
-      </div>
+    <ClubsContext value={clubs}>
+      <div className="flex h-dvh bg-sidebar">
+        <div className="hidden lg:flex">
+          <Sidebar id={SIDEBAR_ID} collapsed={collapsed} clubs={clubs} />
+        </div>
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-overlay"
-            onClick={closeMobileSidebar}
-          />
-          <div className="relative h-full shadow-lg">
-            <Sidebar collapsed={false} clubs={clubs} onNavigate={closeMobileSidebar} />
+        {mobileOpen && (
+          <div className="fixed inset-0 z-40 flex lg:hidden">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-overlay"
+              onClick={closeMobileSidebar}
+            />
+            <div className="relative h-full shadow-lg">
+              <Sidebar collapsed={false} clubs={clubs} onNavigate={closeMobileSidebar} />
+            </div>
+          </div>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col p-2 lg:pl-0">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-background shadow-sm">
+            <Topbar
+              sidebarId={SIDEBAR_ID}
+              breadcrumb={breadcrumb}
+              onToggleSidebar={toggleSidebar}
+              onRefresh={refreshAll}
+            />
+            <main className="min-h-0 flex-1 overflow-y-auto">
+              <div className="flex flex-col gap-6 px-4 pt-7 pb-10 sm:px-8">
+                <Outlet />
+              </div>
+            </main>
           </div>
         </div>
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col p-2 lg:pl-0">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-background shadow-sm">
-          <Topbar
-            sidebarId={SIDEBAR_ID}
-            breadcrumb={breadcrumb}
-            onToggleSidebar={toggleSidebar}
-            onRefresh={refreshAll}
-          />
-          <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="flex flex-col gap-6 px-4 pt-7 pb-10 sm:px-8">
-              <Outlet />
-            </div>
-          </main>
-        </div>
       </div>
-    </div>
+    </ClubsContext>
   );
 }

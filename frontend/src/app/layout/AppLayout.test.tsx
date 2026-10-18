@@ -3,13 +3,28 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DataRefreshProvider } from '../../shared/hooks/DataRefreshProvider';
-import { jsonResponse, mockFetch, requestedUrl } from '../../test/fetch-mock';
+import { jsonResponse, mockApi, requestsTo } from '../../test/fetch-mock';
 import { AppRoutes } from '../AppRoutes';
 
 const CLUBS = [
   { id: 2, name: 'Águias FC', acronym: 'AGU', cash: 51.58, squad_value: 222.68, net_worth: 274.26 },
   { id: 1, name: 'Delta FC', acronym: 'DEL', cash: 300, squad_value: 0, net_worth: 300 },
 ];
+
+const EMPTY_PAGE = { data: [], meta: { page: 1, limit: 10, total_items: 0, total_pages: 0 } };
+
+/** Clubes conforme `clubsResponses` (um por consulta; o último se repete); jogadores vazios. */
+function mockClubsApi(...clubsResponses: Array<() => Response>) {
+  let clubsCalls = 0;
+  return mockApi((url) => {
+    if (url.pathname.endsWith('/clubs')) {
+      const respond = clubsResponses[Math.min(clubsCalls, clubsResponses.length - 1)];
+      clubsCalls += 1;
+      return respond();
+    }
+    return jsonResponse(EMPTY_PAGE);
+  });
+}
 
 function renderApp(path: string) {
   return render(
@@ -31,7 +46,7 @@ describe('AppLayout', () => {
   });
 
   it('abre a tela de jogadores pela raiz, com menu e trilha', async () => {
-    mockFetch().mockResolvedValue(jsonResponse(CLUBS));
+    mockClubsApi(() => jsonResponse(CLUBS));
 
     renderApp('/');
 
@@ -42,8 +57,7 @@ describe('AppLayout', () => {
   });
 
   it('lista os clubes da API no menu, na ordem recebida', async () => {
-    const fetchMock = mockFetch();
-    fetchMock.mockResolvedValue(jsonResponse(CLUBS));
+    const fetchMock = mockClubsApi(() => jsonResponse(CLUBS));
 
     renderApp('/players');
 
@@ -51,11 +65,13 @@ describe('AppLayout', () => {
     const links = await clubsGroup.findAllByRole('link');
     expect(links.map((link) => link.textContent)).toEqual(['AÁguias FC', 'DDelta FC']);
     expect(links[0]).toHaveAttribute('href', '/clubs/2');
-    expect(requestedUrl(fetchMock)).toBe('http://localhost:3000/api/v1/clubs');
+    expect(requestsTo(fetchMock, '/clubs').map(String)).toEqual([
+      'http://localhost:3000/api/v1/clubs',
+    ]);
   });
 
   it('navega pelo menu e mostra o nome do clube na trilha', async () => {
-    mockFetch().mockResolvedValue(jsonResponse(CLUBS));
+    mockClubsApi(() => jsonResponse(CLUBS));
     const user = userEvent.setup();
     renderApp('/players');
 
@@ -72,10 +88,10 @@ describe('AppLayout', () => {
   });
 
   it('mostra o message da API quando os clubes não carregam e permite tentar de novo', async () => {
-    const fetchMock = mockFetch();
-    fetchMock
-      .mockResolvedValueOnce(jsonResponse({ message: 'Falha ao consultar os clubes.' }, 500))
-      .mockResolvedValueOnce(jsonResponse(CLUBS));
+    mockClubsApi(
+      () => jsonResponse({ message: 'Falha ao consultar os clubes.' }, 500),
+      () => jsonResponse(CLUBS),
+    );
     const user = userEvent.setup();
     renderApp('/players');
 
@@ -88,7 +104,7 @@ describe('AppLayout', () => {
   });
 
   it('avisa quando não há clubes cadastrados', async () => {
-    mockFetch().mockResolvedValue(jsonResponse([]));
+    mockClubsApi(() => jsonResponse([]));
 
     renderApp('/players');
 
@@ -96,10 +112,10 @@ describe('AppLayout', () => {
   });
 
   it('recarrega os dados pelo botão "Atualizar dados" sem recarregar a página', async () => {
-    const fetchMock = mockFetch();
-    fetchMock
-      .mockResolvedValueOnce(jsonResponse(CLUBS.slice(0, 1)))
-      .mockResolvedValueOnce(jsonResponse(CLUBS));
+    const fetchMock = mockClubsApi(
+      () => jsonResponse(CLUBS.slice(0, 1)),
+      () => jsonResponse(CLUBS),
+    );
     const user = userEvent.setup();
     renderApp('/players');
     await screen.findByRole('link', { name: /Águias FC/ });
@@ -107,6 +123,7 @@ describe('AppLayout', () => {
     await user.click(screen.getByRole('button', { name: 'Atualizar dados' }));
 
     expect(await screen.findByRole('link', { name: /Delta FC/ })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(requestsTo(fetchMock, '/clubs')).toHaveLength(2);
+    expect(requestsTo(fetchMock, '/players')).toHaveLength(2);
   });
 });
