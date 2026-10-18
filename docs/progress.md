@@ -2,12 +2,12 @@
 
 ## Estado atual
 
-- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda; **5.1 — Fundação do frontend** (18/10/2026).
+- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda; **5.1 — Fundação do frontend**; **5.2 — Listagem de jogadores** (18/10/2026).
 - **Backend:** 11 das 19 rotas do enunciado prontas. Faltam histórico e CSV (RN17–RN18), escalação (RN19), partidas e classificação (RN20–RN21).
-- **Frontend:** layout do Figma (menu lateral, topo, trilha), rotas, cliente HTTP e menu de clubes integrado a `GET /clubs`. Telas de lista ainda provisórias.
-- **Próxima etapa:** 5.2 — tela de jogadores (aguarda autorização do usuário).
-- **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; o primeiro dia possível é 18/10 (Etapa 5.1 ainda não commitada). Prazo: 23/10.
-- **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (commits do backend até `1ee2caf`).
+- **Frontend:** layout do Figma, rotas, cliente HTTP, menu de clubes e **tela de jogadores** integrada a `GET /players` (busca, filtros, ordenação, paginação e estados). Clubes, partidas e classificação ainda provisórias.
+- **Próxima etapa:** 5.3 — operações de jogadores (aguarda autorização do usuário).
+- **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; 5 commits da 5.1 em 18/10 (4 em `frontend/`, já no `origin`); a 5.2 ainda não foi commitada. Prazo: 23/10.
+- **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (último commit `84c5924`, docs da 5.1).
 
 ## Pendências e bloqueios
 
@@ -38,6 +38,23 @@
 | 4.3 | Elenco com contratos (RN11, RN15) | ✅ 18/10 | ver "Mercado" | dias e % de multa na consulta |
 | — | Venda (RN15–RN16) | ✅ 18/10 | ver "Mercado" | `POST /players/{id}/sell` |
 | 5.1 | Fundação do frontend | ✅ 18/10 | ver "Etapa 5.1" | ADR-016, ADR-017, ADR-018; implementação da ADR-009 |
+| 5.2 | Listagem de jogadores (F1 Jogadores, parte) | ✅ 18/10 | ver "Etapa 5.2" | ADR-019; 1 bug achado na aplicação real |
+
+### Etapa 5.2 — o que foi validado (18/10/2026)
+
+| Verificação | Resultado |
+| --- | --- |
+| `npm test` (frontend) | 7 arquivos, 105 testes ok (79 novos): montagem dos query params, faixas de idade e valor (aceites e recusas), páginas visíveis, `formatMoney`, e tela integrada com a API simulada — 9 colunas e valores sem recálculo, "Livre", clube pela lista de `GET /clubs` (1 pedido), total de `meta`, carregamento, vazio, erro com `message`, falha de rede ≠ lista vazia, busca com acento e debounce (1 pedido), busca de 1 caractere não enviada, posição, condição, clube, abas `free`, bloqueio `free=true` + `club_id` nos dois sentidos, faixas válidas e inválidas (erro junto ao campo, sem pedido), combinação, remoção por chip, limpar filtros, 6 ordenações, paginação (próxima, anterior, número, última, volta à 1 ao filtrar), página além da última, resposta atrasada descartada, pedido cancelado sem erro |
+| Mutações | página que não volta à 1 → 1 teste falhou; resposta antiga sem descarte → **sobreviveu** na 1ª versão (a tela não mostrava o dado velho, mas voltava a "carregando"); teste reforçado → passou a falhar; `free=true` com `club_id` → 1 falhou; ordenação local na tela → 1 falhou; código restaurado |
+| Bug achado na aplicação real | página 3 → filtrar → "Limpar filtros" consultava `page=3` (a página antiga voltava com os mesmos filtros). Corrigido (ADR-019, item 2) e coberto por teste que falha sem a correção |
+| `npm run lint` / `npm run format:check` / `npm run build` | ok; build com 304 kB de JS (96 kB gzip) |
+| Exports sem uso | busca por símbolo exportado usado só no próprio arquivo: 4 encontrados (inclusive `DataRefresh`, da 5.1) e o `export` removido |
+| Aplicação real (backend em `node dist/main.js` com `DATABASE_URL` do `passe_test`; Vite) | 23 jogadores, 4 clubes e 11 compras cadastrados **pela API** no banco de teste (limpo antes com o mesmo `TRUNCATE` dos e2e); o banco de desenvolvimento não foi tocado. Pedidos conferidos pelo protocolo DevTools: paginação `page=2`/`3`; filtros combinados `position=MEI&condition=MAL_CONDICIONADO&min_age=18&max_age=30` → volta à página 1; `search=joao` encontrou "João Silva"; `search=zzz` → vazio com "Limpar filtros"; `free=true` desabilita o clube; `club_id=1` desabilita "Livres"; `sort=value_desc` e `sort=position` na ordem da API; `min_value=10.5&max_value=40` a partir de "10,5"; "1e3" recusado junto ao campo; backend parado → erro E03 com a mensagem de conexão |
+| Build de produção (`vite preview`) | 1 pedido inicial; 4 letras digitadas rápido → 1 pedido de busca (no `npm run dev` o 1º pedido aparece 2 vezes pelo StrictMode do React; o primeiro é cancelado) |
+| Larguras | 1366 × 768: sem rolagem horizontal; tabela de 1036 px cabe inteira; popover abre pelo lado que cabe. 375 px: `scrollWidth` = 375; tabela rola dentro do card; paginação cabe (Anterior/Próxima só com ícone) |
+| Não validado | Node 22 (máquina com Node 24); leitor de tela real (acessibilidade conferida por papéis/rótulos nos testes) |
+
+Diferenças em relação ao Figma, todas registradas em `docs/frontend-design.md` §3.1: sem "Novo jogador", "Comprar" e menu "⋯" (etapas seguintes); contagem só na aba ativa; estados dentro do card (abas e ordenação continuam visíveis); chip também para busca e situação; avatares com cores escolhidas pelo id (decorativas).
 
 ### Etapa 5.1 — o que foi validado (18/10/2026)
 
@@ -176,3 +193,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 18/10/2026 | Claude Code (Claude Opus) | `backend/src/players/` (dto, controller, service, mapper, domain/player-listing), `common/domain/pagination.ts`, `common/validation/query-params.ts`, `test/players.e2e-spec.ts` | endpoints de jogadores (RN06–RN09, RN07), parser estrito de query params, testes com os exemplos oficiais e checagem por mutação | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) | `backend/src/market/`, `clubs/` (GET), `common/clock/`, `common/domain/datetime.ts`, `league/lineup-membership.ts`, `test/market.e2e-spec.ts` | compra, venda, consulta de clubes com contratos, relógio injetável e testes com os exemplos oficiais em instante fixo | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/` (configuração, `styles/index.css`, `app/`, `shared/`, `features/*/` páginas provisórias e `clubs/api.ts`), `docs/frontend-design.md`, ADR-016 a 018 | leitura das variáveis e frames do Figma (tokens, medidas do layout, ícones), escolha de versões compatíveis com Node 22 via `npm view`, layout, cliente HTTP, testes com mock de `fetch` e conferência visual com Chrome headless | em revisão pelo candidato |
+| 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/features/players/`, `shared/components/` (DataTable, EmptyState, Badge, Input, FilterSelect), `shared/hooks/use-debounced-value.ts`, `features/clubs/clubs-context.ts`, testes, ADR-019 | leitura dos frames J01, J02, J04, J15 e E01–E07; tela de jogadores integrada à API; testes com API simulada e mutações; validação no navegador com dados controlados no banco de teste | em revisão pelo candidato |

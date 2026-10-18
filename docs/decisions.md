@@ -172,3 +172,16 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
 - **Decisão:** os tipos em `features/*/api.ts` espelham o contrato da API; não há camada de conversão. Variáveis e funções do frontend continuam em camelCase.
 - **Alternativas:** converter na camada `api/` (mais código e um ponto a mais de erro, sem ganho para o avaliador; o mesmo nome aparece no Swagger, no README oficial e na tela).
 - **Consequências:** a URL base vem de `VITE_API_URL` (origem sem `/api/v1`; o cliente acrescenta o prefixo e aceita a origem já com ele); sem a variável, usa `http://localhost:3000`, para o caminho do README funcionar sem `.env` no frontend.
+
+## ADR-019 — Estado da lista de jogadores e lista de clubes compartilhada
+
+- **Status:** Aceita (18/10/2026, Etapa 5.2)
+- **Contexto:** a lista de jogadores combina busca, 6 filtros, ordenação e página; toda mudança de filtro volta à página 1; respostas atrasadas não podem substituir uma consulta mais nova; a coluna "Clube" e o filtro por clube precisam do nome do clube, mas `GET /players` devolve só `club_id`.
+- **Decisão:**
+  1. `usePlayerList` guarda filtros (já no formato da API), texto da busca e página. A consulta é montada por uma função pura (`buildPlayerQuery`) e lida com `useApiQuery` (chave = query params), que cancela o pedido anterior e descarta respostas antigas (ADR-009).
+  2. A página vale só para a consulta em que foi escolhida: quando os filtros mudam, o estado é ajustado durante a renderização (padrão "estado derivado de props" do React), sem `useEffect`. Voltar aos mesmos filtros depois não restaura a página antiga (bug achado na validação real e coberto por teste).
+  3. A busca usa debounce de 300 ms; apagar a busca vale na hora; menos de 2 caracteres não é enviado.
+  4. A lista de `GET /clubs` que o layout já carrega para o menu é compartilhada por `ClubsContext`: a tabela e o filtro de clube usam o mesmo pedido, sem um pedido por linha nem por tela.
+  5. Filtros ficam no estado da tela, não na URL.
+- **Alternativas:** filtros na URL (`useSearchParams`) — sobrevivem ao recarregar, mas exigem validar parâmetros digitados à mão e não são pedidos pelo enunciado; contagem nas três abas (como no Figma) — 2 consultas extras a cada mudança de filtro; um `GET /clubs/{id}` por linha — proibido pelo pedido do usuário e desnecessário.
+- **Consequências:** ao sair da tela de jogadores e voltar, os filtros recomeçam vazios.

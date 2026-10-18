@@ -100,8 +100,8 @@ Prioridades do usuário: arquitetura simples, fidelidade aos fluxos do enunciado
 | Subetapa | Escopo | Situação |
 | --- | --- | --- |
 | 5.1 | Fundação: Vite/React/TS, Tailwind + tokens do Figma, layout (sidebar, topo), rotas iniciais, cliente HTTP, lint/format/testes, documentação | ✅ 18/10/2026 |
-| 5.2 | Tela de jogadores: lista integrada, tabela do Figma (J01), paginação, filtros, ordenação, estados, rolagem interna da tabela | próxima |
-| 5.3 | Operações de jogadores: cadastro, edição, condição, exclusão com confirmação, mensagens; `useApiAction` com guarda de duplo clique | |
+| 5.2 | Tela de jogadores: lista integrada, tabela do Figma (J01), paginação, filtros, ordenação, estados, rolagem interna da tabela | ✅ 18/10/2026 |
+| 5.3 | Operações de jogadores: cadastro, edição, condição, exclusão com confirmação, mensagens; `useApiAction` com guarda de duplo clique | próxima |
 | 5.4 | Clubes: lista e ordenação, cadastro, página do clube com resumo financeiro e elenco | |
 
 As telas de compra, venda, histórico e liga são planejadas depois, com os endpoints restantes do backend.
@@ -111,6 +111,11 @@ As telas de compra, venda, histórico e liga são planejadas depois, com os endp
 - **Critérios de aceite:** `npm run lint`, `npm run format:check`, `npm test` e `npm run build` sem erros; rotas `/players`, `/clubs`, `/clubs/:id`, `/matches`, `/standings` navegáveis pelo menu; menu de clubes vindo de `GET /clubs` com estados de carregamento, vazio e erro; botão "Atualizar dados" recarrega sem recarregar a página; sem rolagem horizontal em 1366 e 375 px.
 - **Commits sugeridos:** `chore(frontend): cria projeto react com vite, tailwind, lint e testes` · `feat(frontend): adiciona tokens do figma, layout com menu lateral e rotas` · `feat(frontend): adiciona cliente http e consulta de clubes no menu`.
 - **Critério herdado do plano original para a 5.3:** botão de ação com teste de duplo clique = 1 chamada.
+
+### Etapa 5.2 — Listagem de jogadores ✅ (18/10/2026)
+
+- **Critérios de aceite:** `GET /players` com busca, 6 filtros combináveis, `sort` com as 6 opções, `page`/`limit=10`; 9 colunas; clube resolvido pela lista de `GET /clubs`; moeda `37,00`; `free=true` + `club_id` impedido na tela; estados de carregamento, vazio (sem jogadores, sem resultado, página além da última) e erro com `message`; sem rolagem horizontal em 1366 e 375 px.
+- **Commits sugeridos:** `feat(frontend): adiciona tabela com estados, badge e campos de filtro compartilhados` · `feat(frontend): lista jogadores com busca, filtros, ordenação e paginação pela api` · `docs: registra a tela de jogadores e a ADR-019`.
 
 ## Etapa 6 — Listagem de jogadores (API)
 

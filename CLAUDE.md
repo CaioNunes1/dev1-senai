@@ -83,6 +83,13 @@ Notas da Etapa 5.1 (frontend):
 - Tipos no formato da API (snake_case), sem conversão (ADR-018). Componentes próprios, sem shadcn/ui (ADR-017); criar um componente compartilhado só quando uma tela o usar.
 - Verificação visual: Chrome headless pelo protocolo DevTools (`Emulation.setDeviceMetricsOverride`), porque `--window-size` não desce a 375 px. Encerrar Vite e Chrome pelo PID (portas 5173 e a do DevTools).
 
+Notas da Etapa 5.2 (lista de jogadores):
+- Toda lista usa `shared/components/DataTable` (carregando, vazio, erro com `message`); filtrar, ordenar e paginar só pela API, nunca `.sort()`/`.filter()` na tela (ADR-019).
+- Nome de clube: `useClubList()` (lista do layout); nunca um `GET /clubs/{id}` por linha.
+- Página volta à 1 sempre que a consulta muda (ajuste de estado na renderização em `usePlayerList`); ao mexer nisso, rodar o teste "limpar os filtros depois de paginar".
+- Validação com dados: subir o backend com `DATABASE_URL` do `passe_test` e cadastrar pela API; nunca gravar no banco `passe` sem autorização. No `npm run dev` o 1º pedido aparece 2 vezes (StrictMode); conferir contagem de pedidos no `vite preview`.
+- Antes de concluir uma etapa do frontend: procurar `export` usado só no próprio arquivo (F2 › código sem uso).
+
 Notas da Etapa 1:
 - Versões fixadas: Nest 11, TypeScript 5.9, Prisma 6, ESLint 9 (motivos na ADR-001). Não atualizar majors sem nova ADR.
 - Nunca usar `ValidationPipe`/`ParseIntPipe` padrão: usar `StrictValidationPipe` (global) e `ParseIdPipe` (ADR-012).

@@ -90,23 +90,45 @@ Heading/Página mobile (20/28) não foi criado (telas mobile fora do escopo).
 
 Elementos do mockup tratados como [M] e ainda não implementados: contadores do menu (Jogadores 23, Clubes 6, Partidas 2), botão "+" de novo clube na sidebar, cartão "Liga Fictícia 2026 / Última partida" no rodapé da sidebar (depende dos endpoints da liga), busca ⌘K e alternância de tema citadas na descrição do componente Sidebar (não aparecem nos frames), detalhes do jogador (J12).
 
+### 3.1 Tela de jogadores (Etapa 5.2) — como foi implementada
+
+Frames consultados: J01 `52:124895` (blocos Filtros `52:125033` e Card · Tabela `52:125076`), J02 `52:125609` (filtros combinados e chips), J04 `52:126486` (Livres × clube), J15 `75:162303` (menu de ordenação), E01 `54:148336`, E02 `54:148765` (card `54:148963`), E03 `54:148977`, E07 `75:163564`.
+
+| Elemento | Figma | Implementação | Origem |
+| --- | --- | --- | --- |
+| Colunas | 9 obrigatórias + ações | as 9, na ordem do J01; nome com avatar e posição por extenso; clube com sigla e link | [O] + visual do Figma |
+| Busca | campo "Buscar por nome" | `search` com debounce de 300 ms; normaliza espaços como a API; 1 caractere não é enviado e mostra orientação; máx. 100 | [O] |
+| Posição, condição, clube | SelectTrigger com ícone | `<select>` nativo sob o visual do trigger ("Posição: MEI", "Condição: Mal condicionado") | [O] |
+| Idade, valor de mercado | "(Popover)" | popover com mínimo/máximo, validação junto ao campo (16–45 inteiro; 0–550 com até 2 casas, vírgula aceita, enviado com ponto) | [O]; conteúdo do popover [D] (o Figma não desenha o painel aberto) |
+| Situação (`free`) | abas Todos/Livres/Em clubes | abas com `aria-pressed`; "Livres" desabilitada com clube escolhido; clube desabilitado com "Livres" + aviso | [O] (bloqueio permitido pelo README) |
+| Filtros ativos | chips + "Limpar filtros" | chips removíveis (inclui busca e situação) + "Limpar filtros" (mantém a ordenação) | [M] |
+| Ordenação | "Ordenar: nome", 6 opções | `sort` com um critério (as 6 opções do J15); a API aceita 2, o Figma mostra 1 | [O] |
+| Paginação | "Mostrando 1–10 de 23 jogadores", Anterior/números/Próxima | `meta` da API; números só de páginas existentes, com reticências acima de 7; em telas estreitas, Anterior/Próxima só com ícone | [O] |
+| Agilidade | barra 40 px: vermelha ≤30, verde ≥80 | mesma barra; largura = agilidade %, cores nas faixas da RN03 (só apresentação do número recebido) | [M] |
+| Contagem nas abas | "Todos 23 · Livres 7 · Em clubes 16" | só a aba ativa mostra o total (`meta.total_items`); as outras exigiriam 2 consultas extras por mudança de filtro | [D] |
+| Estados | E01 esqueleto, E02 vazio, E03 erro | no corpo do card, abaixo das abas e da ordenação (no Figma o card inteiro é trocado); ao recarregar, as linhas ficam visíveis com opacidade e `aria-busy` | [D] |
+| Página além da última | — | 200 com `data: []` e `total_items > 0` → "Esta página não tem jogadores" + "Ir para a página N" | [O] RN07 |
+| Ações por linha | "Comprar", menu "⋯", "Novo jogador" | **não implementadas** nesta etapa (sem botões que não fazem nada) | 5.3 e compra |
+
 ## 4. Componentes
 
-Implementados (Etapa 5.1):
+Implementados:
 
-| Componente | Local | Responsabilidade |
-| --- | --- | --- |
-| `AppLayout`, `Sidebar`, `Topbar` | `app/layout/` | estrutura comum; menu aberto/recolhido (≥1024 px) ou sobreposto (<1024 px); trilha; atualizar dados |
-| `Button` | `shared/components/` | variantes `primary`, `outline`, `ghost`; tamanhos `default`, `sm`, `iconSm` (Figma `6:509`) |
-| `Card` | `shared/components/` | superfície com borda, `rounded-xl`, `shadow-xs` |
-| `PageHeader` | `shared/components/` | ícone, título, descrição e ações |
+| Componente | Local | Responsabilidade | Etapa |
+| --- | --- | --- | --- |
+| `AppLayout`, `Sidebar`, `Topbar` | `app/layout/` | estrutura comum; menu aberto/recolhido (≥1024 px) ou sobreposto (<1024 px); trilha; atualizar dados; fornece a lista de clubes (`ClubsContext`) | 5.1 |
+| `Button` | `shared/components/` | variantes `primary`, `outline`, `ghost`; tamanhos `default`, `sm`, `icon`, `iconSm` (Figma `6:509`) | 5.1 |
+| `Card`, `PageHeader` | `shared/components/` | superfície; ícone, título, descrição e ações | 5.1 |
+| `DataTable` | `shared/components/` | colunas configuráveis; estados **carregando** (esqueleto + `role="status"`), **vazio** (conteúdo recebido) e **erro** (`message` + "Tentar de novo"); rolagem horizontal interna | 5.2 |
+| `EmptyState` | `shared/components/` | bloco de vazio/erro/não encontrado (E02, E03, E04) | 5.2 |
+| `Badge` | `shared/components/` | `outline`, `secondary`, `success`, `warning`, `destructive`, com ponto opcional (Figma `6:560`) | 5.2 |
+| `Input`, `FilterSelect` | `shared/components/` | campo de texto (Figma `6:721`); filtro de seleção com ícone (Figma `6:866`) | 5.2 |
+| `PlayersFilters`, `RangeFilter`, `PlayersTableToolbar`, `PlayersTable`, `PlayersPagination`, `ConditionBadge`, `PlayerAvatar` | `features/players/` | peças da tela de jogadores; `ConditionBadge` e `PlayerAvatar` serão reaproveitados no elenco do clube | 5.2 |
 
 Previstos, criados quando a primeira tela precisar (evita componente sem uso):
 
 | Componente | Responsabilidade | Primeira tela |
 | --- | --- | --- |
-| `DataTable` | cabeçalho, linhas, estados **carregando / vazio / erro**, rolagem horizontal interna | 5.2 |
-| `Pagination`, `Badge` (condição, tipo, resultado), `Avatar` | | 5.2 |
 | `FormField` | rótulo + controle + mensagem de erro junto ao campo | 5.3 |
 | `Dialog`, `ConfirmDialog` | formulários e confirmações (excluir, vender) | 5.3 |
 | `Toast` / `Alert` | sucesso e `message` da API | 5.3 |
@@ -129,4 +151,6 @@ Regras de escrita do Figma (Escrita e acessibilidade): botões começam com verb
 
 ## 7. Responsividade (diferencial F5, 1 ponto)
 
-Decisão do usuário (18/10/2026): o foco é o desktop e as telas da página "Telas · Mobile" não serão reproduzidas. O layout base já não tem rolagem horizontal em 375 px (menu vira painel sobreposto, padding lateral de 16 px); cada tabela futura rola dentro do próprio quadro, o que mantém o critério do F5 ao alcance sem telas próprias.
+Decisão do usuário (18/10/2026): o foco é o desktop e as telas da página "Telas · Mobile" não serão reproduzidas. O layout base já não tem rolagem horizontal em 375 px (menu vira painel sobreposto, padding lateral de 16 px); cada tabela rola dentro do próprio quadro (`DataTable`, largura mínima `min-w-4xl`), o que mantém o critério do F5 ao alcance sem telas próprias.
+
+Jogadores em 375 px (medido na Etapa 5.2): página com `scrollWidth` = 375; filtros empilhados (busca em linha inteira); tabela rola dentro do card (926 px de conteúdo em 325 px); popover de faixa ocupa a largura útil; paginação cabe sem cortar.
