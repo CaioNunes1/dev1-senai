@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+
+/*
+ * Tokens do Figma "Passe", página "Sistema de design" (01 · Fundamentos), tema claro.
+ * Nomes iguais aos das variáveis do arquivo; componentes usam só estes tokens semânticos.
+ * Valores lidos pelas variáveis do Figma em 18/10/2026 (docs/frontend-design.md).
+ */
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Base */
+  --color-background: #ffffff;
+  --color-foreground: #09090b;
+  --color-card: #ffffff;
+  --color-card-foreground: #09090b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #09090b;
+  --color-muted: #f4f4f5;
+  --color-muted-subtle: #fafafa;
+  --color-muted-foreground: #686872;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #18181b;
+  --color-border: #e4e4e7;
+  --color-input: #91919b;
+  --color-ring: #155dfc;
+  --color-overlay: #00000080;
+
+  /* Ação */
+  --color-primary: #155dfc;
+  --color-primary-hover: #1447e6;
+  --color-primary-foreground: #ffffff;
+  --color-primary-soft: #eff6ff;
+  --color-primary-soft-foreground: #1447e6;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #18181b;
+
+  /* Status */
+  --color-success: #00813a;
+  --color-success-soft: #f0fdf4;
+  --color-success-soft-foreground: #016630;
+  --color-success-soft-border: #b9f8cf;
+  --color-warning: #b55200;
+  --color-warning-soft: #fffbeb;
+  --color-warning-soft-foreground: #953d00;
+  --color-warning-soft-border: #fee685;
+  --color-destructive: #e40016;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-soft: #fef2f2;
+  --color-destructive-soft-foreground: #bf000f;
+  --color-destructive-soft-border: #ffcaca;
+
+  /* Sidebar */
+  --color-sidebar: #fafafa;
+  --color-sidebar-foreground: #09090b;
+  --color-sidebar-accent: #f4f4f5;
+  --color-sidebar-accent-foreground: #18181b;
+  --color-sidebar-border: #e4e4e7;
+
+  /* Avatares (decorativos) */
+  --color-avatar-violet: #ede9fe;
+  --color-avatar-violet-foreground: #7008e7;
+  --color-avatar-pink: #fce7f3;
+  --color-avatar-pink-foreground: #c2005c;
+  --color-avatar-cyan: #cefafe;
+  --color-avatar-cyan-foreground: #005f78;
+  --color-avatar-teal: #cbfbf1;
+  --color-avatar-teal-foreground: #005f5a;
+  --color-avatar-zinc: #e4e4e7;
+  --color-avatar-zinc-foreground: #3f3f46;
+
+  /* Raios medidos nos frames: itens 6, botões e campos 8, alertas 10, cards 12, painel 14 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+
+  /* Sombras: Shadow/xs, sm, md e lg do Figma */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Estilos de texto do Figma que não coincidem com a escala padrão (xs, sm e base coincidem) */
+  --text-heading-page: 24px;
+  --text-heading-page--line-height: 32px;
+  --text-heading-page--letter-spacing: -0.025em;
+  --text-heading-page--font-weight: 600;
+  --text-heading-dialog: 18px;
+  --text-heading-dialog--line-height: 24px;
+  --text-heading-dialog--letter-spacing: -0.01em;
+  --text-heading-dialog--font-weight: 600;
+  --text-heading-card: 16px;
+  --text-heading-card--line-height: 24px;
+  --text-heading-card--letter-spacing: -0.01em;
+  --text-heading-card--font-weight: 600;
+
+  /* Medidas do layout (frames J01 e Sidebar) */
+  --spacing-sidebar: 256px;
+  --spacing-sidebar-collapsed: 48px;
+  --spacing-topbar: 56px;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-sidebar font-sans text-sm text-foreground antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+}
