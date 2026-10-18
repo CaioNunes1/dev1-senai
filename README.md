@@ -129,6 +129,8 @@ Bibliotecas do frontend além da stack obrigatória (React + Vite):
 | `tailwindcss`, `@tailwindcss/vite` | estilos com os tokens do design system do mockup |
 | `lucide-react` | ícones; é o conjunto usado no mockup do Figma |
 | `@fontsource-variable/geist` | fonte Geist do mockup, servida pelo próprio build |
+| `react-hook-form` | estado dos formulários (cadastro e edição de jogador), sem redesenhar a tela a cada tecla |
+| `zod`, `@hookform/resolvers` | validação dos campos antes de enviar, com o tipo do corpo da API inferido do schema |
 | `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/dom`, `@testing-library/jest-dom`, `@testing-library/user-event` | testes de componente |
 | `eslint`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `eslint-config-prettier`, `globals`, `prettier` | lint e formatação |
 

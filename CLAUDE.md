@@ -90,6 +90,13 @@ Notas da Etapa 5.2 (lista de jogadores):
 - Validação com dados: subir o backend com `DATABASE_URL` do `passe_test` e cadastrar pela API; nunca gravar no banco `passe` sem autorização. No `npm run dev` o 1º pedido aparece 2 vezes (StrictMode); conferir contagem de pedidos no `vite preview`.
 - Antes de concluir uma etapa do frontend: procurar `export` usado só no próprio arquivo (F2 › código sem uso).
 
+Notas da Etapa 5.3 (ações de escrita):
+- Toda ação de escrita usa `useApiAction` (trava síncrona) e, no sucesso, quem chama faz `refreshAll()`; nunca recalcular overall/valores — mostrar a resposta da API (ADR-020).
+- Diálogos: `shared/components/Dialog` (erro da API em `notice`, fica visível); confirmação destrutiva com `ConfirmDialog`. Não usar `<dialog>` nativo (o jsdom não tem `showModal`).
+- Formulários: React Hook Form + Zod; campos texto → número no schema; regras que cruzam campos ficam só na API. Regras de texto (V4) só por `shared/lib/text.ts`.
+- Testes: `renderApp` (`src/test/render-app.tsx`) e `mockApi`/`writesTo` (`src/test/fetch-mock.ts`) para conferir método e corpo enviados.
+- Se as portas 3000/5173 estiverem ocupadas por processos do usuário, não encerrá-los: validar numa cópia isolada (backend `PORT=3001` + `CORS_ORIGIN=http://localhost:5174` com o `passe_test`; `VITE_API_URL=http://localhost:3001 npx vite --port 5174`).
+
 Notas da Etapa 1:
 - Versões fixadas: Nest 11, TypeScript 5.9, Prisma 6, ESLint 9 (motivos na ADR-001). Não atualizar majors sem nova ADR.
 - Nunca usar `ValidationPipe`/`ParseIntPipe` padrão: usar `StrictValidationPipe` (global) e `ParseIdPipe` (ADR-012).

@@ -109,7 +109,7 @@ Erros: qualquer exceção → AllExceptionsFilter → { message } + status (400/
 
 Detalhes de telas e tokens em [frontend-design.md](frontend-design.md).
 
-Estrutura após a Etapa 5.2 (✅ = existe; o resto entra com a tela que o usa):
+Estrutura após a Etapa 5.3 (✅ = existe; o resto entra com a tela que o usa):
 
 ```text
 frontend/
@@ -118,17 +118,20 @@ frontend/
 └── src/
     ├── main.tsx                 ✅ monta <App/> e importa os estilos
     ├── app/
-    │   ├── App.tsx              ✅ BrowserRouter + DataRefreshProvider
+    │   ├── App.tsx              ✅ BrowserRouter + AppProviders (DataRefreshProvider, ToastProvider)
     │   ├── AppRoutes.tsx        ✅ rotas declarativas (modo biblioteca)
     │   └── layout/              ✅ AppLayout, Sidebar, Topbar, navigation.ts (rotas, menu, trilha)
     ├── shared/
     │   ├── api/http-client.ts   ✅ apiRequest, ApiError, URL base de VITE_API_URL + /api/v1
-    │   ├── hooks/               ✅ useApiQuery, DataRefreshProvider/useDataRefresh, useDebouncedValue · useApiAction (5.3)
-    │   ├── components/          ✅ Button, Card, PageHeader, DataTable, EmptyState, Badge, Input, FilterSelect · FormField, Dialog, Toast (5.3)
-    │   └── lib/                 ✅ cx, formatMoney · formatador de data (histórico)
+    │   ├── hooks/               ✅ useApiQuery, useApiAction, DataRefreshProvider/useDataRefresh, ToastProvider/useToast, useDebouncedValue
+    │   ├── components/          ✅ Button, Card, PageHeader, DataTable, EmptyState, Badge, Input, FilterSelect, FormField, Alert,
+    │   │                           Dialog, ConfirmDialog
+    │   └── lib/                 ✅ cx, formatMoney, text (regras V4 iguais às do backend) · formatador de data (histórico)
     ├── features/
     │   ├── players/             ✅ api.ts, usePlayerList, player-filters (funções puras), PlayersPage, PlayersFilters, RangeFilter,
-    │   │                           PlayersTableToolbar, PlayersTable, PlayersPagination, ConditionBadge, PlayerAvatar · formulários (5.3)
+    │   │                           PlayersTableToolbar, PlayersTable, PlayersPagination, ConditionBadge, PlayerAvatar,
+    │   │                           player-schemas (Zod), PlayerDialogs, Create/Created/Edit/Condition/DeletePlayerDialog,
+    │   │                           PlayerActionsMenu, PositionPicker, PlayerSummary
     │   ├── clubs/               ✅ api.ts (GET /clubs), useClubs, ClubsContext/useClubList, ClubsPage e ClubDetailPage (provisórias, 5.4)
     │   ├── market/              compra, venda, histórico e CSV
     │   └── league/              ✅ MatchesPage e StandingsPage (provisórias) · escalação, partidas
@@ -141,7 +144,7 @@ Regras:
 - Componentes **não chamam** `fetch`: `features/*/api.ts` (funções tipadas, campos no formato da API, ADR-018) → hooks → componentes. A única chamada a `fetch` do projeto está em `shared/api/http-client.ts`.
 - Recusas viram `ApiError` com o `message` da API e o `status`; falha de rede vira `ApiError` com `status = null` e texto próprio.
 - Valores calculados (valor de mercado, multa, classificação…) são **apenas exibidos**. Ordem das listas = ordem da API.
-- Após cada uma das 9 ações, a ação chama `refreshAll()` e todas as consultas abertas recarregam, sem recarregar a página (ADR-009).
+- Ações de escrita usam `useApiAction` (trava síncrona contra envio duplo, `message` da API preservado). No sucesso, quem chama decide: `refreshAll()` recarrega todas as consultas abertas, sem recarregar a página (ADR-009, ADR-020).
 - Mensagens: sucesso padronizado; erro mostra o `message` da API.
 - Componentes compartilhados só nascem quando uma tela precisa deles (ADR-017); componentes de uma única feature ficam na pasta dela.
 - Toda tela de lista usa o `DataTable` (estados de carregamento, vazio e erro num só lugar, F2/F3). Filtrar, ordenar e paginar é sempre papel da API: a tela só monta os query params (ADR-019).

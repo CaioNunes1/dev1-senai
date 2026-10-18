@@ -94,6 +94,7 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
 - **Contexto:** 7 formulários com mensagens junto ao campo (F2).
 - **Decisão:** RHF (estado de formulário sem re-render a cada tecla) + Zod (schemas tipados, com o tipo do formulário inferido).
 - **Alternativa:** formulários controlados à mão (mais código repetido entre 7 formulários → risco em F2 › Componentes).
+- **Implementação (Etapa 5.3, 18/10/2026):** `react-hook-form` 7.90, `zod` 4.6 e `@hookform/resolvers` 5.9.1 (o adaptador `zodResolver`; a 5.9.2 tinha saído no dia anterior e não foi usada). Os campos são texto no formulário e o Zod converte para número JSON (vazio, fração ou texto viram erro, nunca 0). O tipo do corpo enviado vem do schema (`useForm<Entrada, unknown, Saída>`). Custo: o JS do build passou de 304 kB para 450 kB (140 kB gzip), quase todo o aumento vem do Zod.
 
 ## ADR-011 — Caminho principal de execução: banco em Docker + Node local; Docker completo como diferencial
 
@@ -153,7 +154,7 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
   | `lucide-react` | 1.59 | igual | o Figma identifica cada ícone como Lucide (descrição dos componentes `Icon/*`); usar o pacote mantém o traço idêntico sem copiar SVGs |
   | `@fontsource-variable/geist` | 5.3 | igual | fonte Geist do Figma servida pelo próprio build (sem CDN em tempo de execução) |
 
-- **Adiadas:** React Hook Form e Zod (ADR-010) entram na Etapa 5.3, com o primeiro formulário; instalar antes deixaria dependências sem uso.
+- **Adiadas:** React Hook Form e Zod (ADR-010) entram na Etapa 5.3, com o primeiro formulário; instalar antes deixaria dependências sem uso. (Instaladas na 5.3; versões na ADR-010.)
 - **Alternativas:** Axios (o `fetch` nativo basta: um cliente de 100 linhas cobre prefixo, JSON, erros e cancelamento); `prettier-plugin-tailwindcss` (ordenação de classes; dispensável).
 - **Consequências:** `npm audit` sem vulnerabilidades na instalação. O `eslint@9` aparece como "não suportado" no npm desde o lançamento do 10; atualizar exige nova ADR para as duas pastas.
 
@@ -185,3 +186,16 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
   5. Filtros ficam no estado da tela, não na URL.
 - **Alternativas:** filtros na URL (`useSearchParams`) — sobrevivem ao recarregar, mas exigem validar parâmetros digitados à mão e não são pedidos pelo enunciado; contagem nas três abas (como no Figma) — 2 consultas extras a cada mudança de filtro; um `GET /clubs/{id}` por linha — proibido pelo pedido do usuário e desnecessário.
 - **Consequências:** ao sair da tela de jogadores e voltar, os filtros recomeçam vazios.
+
+## ADR-020 — Ações de escrita: diálogo próprio, trava contra envio duplo, avisos e validação dividida
+
+- **Status:** Aceita (18/10/2026, Etapa 5.3)
+- **Contexto:** as ações de jogador (cadastrar, editar, alterar condição, excluir) abrem diálogos, precisam impedir o envio duplo (F3: o HAR deve mostrar um só pedido), mostrar sucesso ou o `message` da API e atualizar a lista sem recarregar.
+- **Decisão:**
+  1. **`Dialog` próprio** (portal, `role="dialog"` + `aria-modal`, foco preso, Esc, foco devolvido a quem abriu). Título, aviso de erro (`notice`) e rodapé ficam fixos; só o conteúdo rola — o cadastro (11 campos) não cabe em 1366 × 768.
+  2. **`useApiAction`**: trava síncrona por `ref` (o clique duplo chega antes de o React desabilitar o botão), `isPending` para desabilitar o botão, `error` com o `ApiError` original, callbacks `onSuccess`/`onError` e nenhuma atualização de estado depois de desmontar. O hook **não** atualiza a lista: quem chama decide (`refreshAll`, ADR-009).
+  3. **Avisos**: `ToastProvider` (sucesso com `role="status"`, erro com `role="alert"`) para edição, condição e exclusão; o cadastro mostra o resultado num diálogo (Figma J07) com valor base, valor de mercado e overall **da resposta do 201**. Recusas da API aparecem dentro do diálogo, que continua aberto e com os dados.
+  4. **Validação dividida**: na tela, só obrigatórios, formato e tamanho do nome (regras V4 iguais às do backend, em `shared/lib/text.ts`), faixas de um campo e os bloqueios que o enunciado permite (idade menor na edição, posição de jogador com clube, Doente → Apto, excluir jogador com clube). Regras que cruzam campos (idade × agilidade, soma dos atributos, potencial) ficam só na API; a tela mostra o `message`.
+  5. 404 ou 409 numa ação aberta recarregam a lista (os dados mudaram depois que a tela abriu).
+- **Alternativas:** `<dialog>` nativo com `showModal()` (o jsdom dos testes não implementa; os testes não poderiam verificar foco e Esc); biblioteca de componentes (Radix/shadcn, rejeitada na ADR-017); `refreshAll` automático dentro do `useApiAction` (acoplaria o hook à lista, contra o pedido do usuário); repetir no Zod as regras cruzadas (duas fontes da mesma regra).
+- **Consequências:** o menu de ações da linha também abre num portal com posição fixa, para não ser cortado pela rolagem da tabela, e fecha ao rolar a página.

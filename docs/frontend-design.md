@@ -108,7 +108,26 @@ Frames consultados: J01 `52:124895` (blocos Filtros `52:125033` e Card · Tabela
 | Contagem nas abas | "Todos 23 · Livres 7 · Em clubes 16" | só a aba ativa mostra o total (`meta.total_items`); as outras exigiriam 2 consultas extras por mudança de filtro | [D] |
 | Estados | E01 esqueleto, E02 vazio, E03 erro | no corpo do card, abaixo das abas e da ordenação (no Figma o card inteiro é trocado); ao recarregar, as linhas ficam visíveis com opacidade e `aria-busy` | [D] |
 | Página além da última | — | 200 com `data: []` e `total_items > 0` → "Esta página não tem jogadores" + "Ir para a página N" | [O] RN07 |
-| Ações por linha | "Comprar", menu "⋯", "Novo jogador" | **não implementadas** nesta etapa (sem botões que não fazem nada) | 5.3 e compra |
+| Ações por linha | "Comprar", menu "⋯", "Novo jogador" | "Novo jogador" e menu "⋯" implementados na 5.3 (§3.2); "Comprar" fica para a etapa de compra | 5.3 e compra |
+
+### 3.2 Operações de jogadores (Etapa 5.3) — como foram implementadas
+
+Frames consultados: J05 `52:127206` (novo), J06 `52:128117` (erros), J07 `52:129930` (cadastrado), J08 `52:130694` (menu), J09 `52:131441` (editar), J10 `52:133040` (condição), J11 `52:133818` (condição alterada), J13 `52:135248` (excluir), J14 `75:161598` (excluído), J16 `75:164831` (titular).
+
+| Elemento | Figma | Implementação | Origem |
+| --- | --- | --- | --- |
+| Novo jogador | botão primário no PageHeader; diálogo grande | `POST /players` com os 11 campos como números; posição em cartões (rádios); valor base e overall "Após salvar" | [O] |
+| Validação | erros junto aos campos (J06) | Zod: obrigatórios, nome (V4: 3–100, 2 palavras, sem dígitos, sem controle), faixas de um campo; regras cruzadas só na API (`message` no diálogo) | [O] F2 |
+| Resultado do cadastro | J07: valor base, valor de mercado, overall | diálogo com os valores **do 201**; a linha nova fica destacada (`primary-soft`) | [O] |
+| Menu "⋯" | J08: Ver detalhes, Editar, Alterar condição, Comprar, Excluir | Editar, Alterar condição e Excluir; Excluir desabilitado com o motivo para jogador com clube; portal com posição fixa; teclado (setas, Home/End, Esc) | [O]; "Ver detalhes" (J12) e "Comprar" não implementados |
+| Editar | J09 | carrega `GET /players/{id}`; `PUT` com os 4 campos; posição travada com clube; idade não diminui; dados imutáveis em aviso | [O] RN08 |
+| Alterar condição | J10: cartões com descrição e "Atual" | `PATCH`; Apto desabilitado vindo de Doente com o motivo; aviso com o valor de mercado **da resposta** | [O] |
+| Excluir | J13: confirmação destrutiva | `DELETE` (204); aviso; volta uma página se a última ficar vazia | [O] RN09 |
+| Avisos | J11/J14: toast no canto | `ToastProvider` (some em 6 s; pode fechar) | [O] F3 |
+| Titular que fica Doente | J16: alerta "é titular" | **não implementado**: depende de `GET /clubs/{id}/lineup`, que o backend ainda não tem | [M] |
+| Prévia dos atributos | J05: barras dos valores digitados | **não implementada** (decorativa) | [M] |
+
+Diferenças visuais [D]: asterisco nos campos obrigatórios (o Figma não mostra; o prompt da etapa pede a indicação); rodapé e aviso de erro fixos no diálogo, com rolagem só no conteúdo (o Figma desenha o diálogo inteiro sem rolagem, em 1440 × 1022).
 
 ## 4. Componentes
 
@@ -124,15 +143,15 @@ Implementados:
 | `Badge` | `shared/components/` | `outline`, `secondary`, `success`, `warning`, `destructive`, com ponto opcional (Figma `6:560`) | 5.2 |
 | `Input`, `FilterSelect` | `shared/components/` | campo de texto (Figma `6:721`); filtro de seleção com ícone (Figma `6:866`) | 5.2 |
 | `PlayersFilters`, `RangeFilter`, `PlayersTableToolbar`, `PlayersTable`, `PlayersPagination`, `ConditionBadge`, `PlayerAvatar` | `features/players/` | peças da tela de jogadores; `ConditionBadge` e `PlayerAvatar` serão reaproveitados no elenco do clube | 5.2 |
+| `Dialog`, `ConfirmDialog` | `shared/components/` | modal com foco preso, Esc, título/aviso/rodapé fixos; confirmação com variante destrutiva e estado de envio (ADR-020) | 5.3 |
+| `FormField`, `Alert` | `shared/components/` | rótulo + campo + dica + erro ligados por `aria-describedby`; aviso info/warning/destructive (Figma `6:978`) | 5.3 |
+| `ToastProvider` / `useToast`, `useApiAction` | `shared/hooks/` | avisos de sucesso/erro; ação de escrita com trava síncrona contra envio duplo | 5.3 |
+| `PlayerDialogs`, `CreatePlayerDialog`, `CreatedPlayerDialog`, `EditPlayerDialog`, `ConditionDialog`, `DeletePlayerDialog`, `PlayerActionsMenu`, `PositionPicker`, `PlayerSummary` | `features/players/` | operações de jogador | 5.3 |
 
 Previstos, criados quando a primeira tela precisar (evita componente sem uso):
 
 | Componente | Responsabilidade | Primeira tela |
 | --- | --- | --- |
-| `FormField` | rótulo + controle + mensagem de erro junto ao campo | 5.3 |
-| `Dialog`, `ConfirmDialog` | formulários e confirmações (excluir, vender) | 5.3 |
-| `Toast` / `Alert` | sucesso e `message` da API | 5.3 |
-| `useApiAction` | estado pendente + guarda síncrona contra duplo clique + `refreshAll` no sucesso | 5.3 |
 | `Tabs` | abas do clube | 5.4 |
 
 ## 5. Formatação e datas

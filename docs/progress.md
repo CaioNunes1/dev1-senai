@@ -2,12 +2,12 @@
 
 ## Estado atual
 
-- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda; **5.1 — Fundação do frontend**; **5.2 — Listagem de jogadores** (18/10/2026).
+- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda; **5.1 — Fundação do frontend**; **5.2 — Listagem de jogadores**; **5.3 — Operações de jogadores** (18/10/2026).
 - **Backend:** 11 das 19 rotas do enunciado prontas. Faltam histórico e CSV (RN17–RN18), escalação (RN19), partidas e classificação (RN20–RN21).
-- **Frontend:** layout do Figma, rotas, cliente HTTP, menu de clubes e **tela de jogadores** integrada a `GET /players` (busca, filtros, ordenação, paginação e estados). Clubes, partidas e classificação ainda provisórias.
-- **Próxima etapa:** 5.3 — operações de jogadores (aguarda autorização do usuário).
-- **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; 5 commits da 5.1 em 18/10 (4 em `frontend/`, já no `origin`); a 5.2 ainda não foi commitada. Prazo: 23/10.
-- **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (último commit `84c5924`, docs da 5.1).
+- **Frontend:** layout do Figma, rotas, cliente HTTP, menu de clubes e **tela de jogadores completa**: lista (busca, filtros, ordenação, paginação, estados) e cadastro, edição, condição e exclusão. Clubes, partidas e classificação ainda provisórias.
+- **Próxima etapa:** 5.4 — telas de clubes (aguarda autorização do usuário).
+- **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; 6 commits que alteram `frontend/` em 18/10 (5.1 e 5.2, já no `origin`); a 5.3 ainda não foi commitada. Faltam dias de push: só 18/10 até agora. Prazo: 23/10.
+- **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (último commit `292b86f`, docs da 5.2).
 
 ## Pendências e bloqueios
 
@@ -39,6 +39,22 @@
 | — | Venda (RN15–RN16) | ✅ 18/10 | ver "Mercado" | `POST /players/{id}/sell` |
 | 5.1 | Fundação do frontend | ✅ 18/10 | ver "Etapa 5.1" | ADR-016, ADR-017, ADR-018; implementação da ADR-009 |
 | 5.2 | Listagem de jogadores (F1 Jogadores, parte) | ✅ 18/10 | ver "Etapa 5.2" | ADR-019; 1 bug achado na aplicação real |
+| 5.3 | Operações de jogadores (F1 Jogadores; F2 formulários; F3 mensagens) | ✅ 18/10 | ver "Etapa 5.3" | ADR-020; React Hook Form + Zod instalados |
+
+### Etapa 5.3 — o que foi validado (18/10/2026)
+
+| Verificação | Resultado |
+| --- | --- |
+| `npm test` (frontend) | 10 arquivos, 155 testes ok (50 novos): `useApiAction` (3 chamadas seguidas = 1 execução, `isPending`, erro preservado e nova tentativa, desmontagem), schemas (conversão texto → número sem virar 0, 11 obrigatórios, nome V4, faixas e limites, regras cruzadas deixadas para a API, idade que não diminui) e 18 de integração com API falsa com estado: cadastro (corpo exato de 11 campos numéricos, resultado do 201, lista recarregada, erros junto aos campos sem POST, 400 com dados mantidos, clique duplo = 1 POST, falha de rede + nova tentativa), edição (`GET` antes, `PUT` com 4 campos, posição travada com clube, idade menor bloqueada, 409), condição (Apto bloqueado de Doente, `PATCH`, valor da resposta, condição atual aceita), exclusão (habilitada só para livre, cancelar sem pedido, `DELETE` 204 com clique duplo = 1 pedido, 409, 404 com recarga, última página vazia volta uma), menu e foco por teclado |
+| Mutações | sem trava síncrona → 1 falhou; idade pode diminuir → 2; Apto liberado de Doente → 1; sem recarregar depois de gravar → 3; Excluir liberado com clube → 1; código restaurado |
+| `npm run lint` / `format:check` / `build` | ok; JS do build 450 kB (140 kB gzip), antes 304 kB — aumento vindo do Zod |
+| `npm install` | 0 vulnerabilidades |
+| Exports sem uso | 3 encontrados e o `export` removido |
+| Aplicação real | as portas 3000 e 5173 estavam com processos do usuário (`start:prod` no banco de dev) — **não foram tocados**; validação numa cópia isolada (backend na 3001 com `passe_test`, Vite na 5174). Cadastro: 11 erros junto aos campos; recusa 400 da API ("potential deve ser maior ou igual ao maior atributo (74)") no diálogo com dados mantidos; nova tentativa com clique duplo → 1 POST; J07 com 26,00 / 26,00 / 68 (igual ao Figma). Edição de jogador com clube: posições travadas, idade 26 < 27 bloqueada, `PUT` com 4 campos; atributos técnicos iguais na API antes e depois. Condição: Apto desabilitado (Doente), `PATCH` → Mal condicionado (28,29 na API); depois → Apto (30,36). Exclusão: Excluir desabilitado com clube; livre → confirmação, clique duplo → 1 DELETE, aviso, `GET` passa a 404, total 24 → 23 |
+| Larguras | 1366 × 768: diálogo de cadastro com rodapé e erro sempre visíveis (rolagem só no conteúdo — ajuste feito depois da 1ª captura, em que "Salvar" ficava abaixo da dobra). 375 px: diálogo com 343 px, rolagem interna, `scrollWidth` = 375; menu da linha aparece inteiro sobre a tabela rolada |
+| Não validado | Node 22; leitor de tela real; teclado virtual de celular |
+
+Diferenças em relação ao Figma (registradas em `docs/frontend-design.md` §3.2): sem "Ver detalhes" (J12), "Comprar", "Prévia dos atributos" e o alerta de titular (J16, depende de `GET /clubs/{id}/lineup`); asterisco nos obrigatórios; diálogo com rodapé fixo.
 
 ### Etapa 5.2 — o que foi validado (18/10/2026)
 
@@ -194,3 +210,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 18/10/2026 | Claude Code (Claude Opus) | `backend/src/market/`, `clubs/` (GET), `common/clock/`, `common/domain/datetime.ts`, `league/lineup-membership.ts`, `test/market.e2e-spec.ts` | compra, venda, consulta de clubes com contratos, relógio injetável e testes com os exemplos oficiais em instante fixo | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/` (configuração, `styles/index.css`, `app/`, `shared/`, `features/*/` páginas provisórias e `clubs/api.ts`), `docs/frontend-design.md`, ADR-016 a 018 | leitura das variáveis e frames do Figma (tokens, medidas do layout, ícones), escolha de versões compatíveis com Node 22 via `npm view`, layout, cliente HTTP, testes com mock de `fetch` e conferência visual com Chrome headless | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/features/players/`, `shared/components/` (DataTable, EmptyState, Badge, Input, FilterSelect), `shared/hooks/use-debounced-value.ts`, `features/clubs/clubs-context.ts`, testes, ADR-019 | leitura dos frames J01, J02, J04, J15 e E01–E07; tela de jogadores integrada à API; testes com API simulada e mutações; validação no navegador com dados controlados no banco de teste | em revisão pelo candidato |
+| 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/shared/` (Dialog, ConfirmDialog, FormField, Alert, ToastProvider, useApiAction, text.ts), `features/players/` (schemas, diálogos, menu de ações), `app/AppProviders.tsx`, testes, ADR-020 | leitura dos frames J05–J16; formulários com React Hook Form + Zod; ações com trava contra envio duplo; testes com API falsa com estado e mutações; validação no navegador numa cópia isolada com o banco de teste | em revisão pelo candidato |
