@@ -56,7 +56,9 @@ Legenda: ✱ coluna adicional (permitida pelo enunciado).
 
 ✱ Índice único parcial "um contrato ATIVO por jogador" seria desejável, mas o Prisma não expressa índices parciais no schema; a invariante é garantida pela transação da compra (jogador precisa estar livre). Reavaliar na etapa de compra.
 
-### `transacoes` → `Transaction`
+### `transacoes` → `MarketTransaction`
+
+O modelo se chama `MarketTransaction`, e não `Transaction`, para não confundir com a transação do banco (`prisma.$transaction`). O glossário oficial faz o mesmo alerta.
 
 | Coluna | Tipo | Observação |
 | --- | --- | --- |
@@ -87,7 +89,18 @@ Escalação completa ⇔ 5 linhas para o clube. A formação fica em `clubes.for
 
 `id`, `partida_id` (FK), `ordem` (1–6), `clube_atacante_id` (FK), `atacante_id`, `defensor_id` (FK jogadores), `nome_atacante`, `nome_defensor` (varchar(100)), `posicao_atacante`, `posicao_defensor` (varchar(3)), `condicao_atacante`, `condicao_defensor` (varchar(20)), `atributo_ataque`, `atributo_defesa` (varchar(10): `shooting`/`passing`/`dribbling`/`defending`), `valor_ataque`, `valor_defesa` (integer), `gol` (boolean).
 
-Colunas de snapshot em `duelos_partida` ficam como `varchar` (não enum) para registrar literalmente o momento, como na tabela oficial.
+Colunas de snapshot em `duelos_partida` ficam como `varchar` (não enum) para registrar literalmente o momento, como na tabela oficial. ✱ Índice único adicional `(partida_id, ordem)`: cada partida tem um único duelo de cada ordem.
+
+### Tipos ENUM no PostgreSQL
+
+`posicao` (GOL, ZAG, LAT, MEI, ATA), `condicao_fisica` (APTO, MAL_CONDICIONADO, DOENTE), `situacao_contrato` (ATIVO, ENCERRADO, RESCINDIDO) e `tipo_transacao` (COMPRA, VENDA). Os nomes dos tipos ficam em português (`@@map`), como as tabelas.
+
+## Implementação (Etapa 2, 17/10/2026)
+
+- Schema: `backend/prisma/schema.prisma`. Migration inicial: `backend/prisma/migrations/20261017213311_init/`.
+- Conferido no banco real: as 71 colunas obrigatórias existem com os nomes exatos; as 8 colunas de moeda são `numeric` com 2 casas; PKs (inclusive a composta de `escalacoes`), FKs e índices únicos conforme a seção 5.
+- Simulação das inserções diretas do barema (B3), dentro de transação desfeita com `ROLLBACK`: os 4 casos se comportam como esperado.
+- `migrate deploy` e `migrate reset --force` validados num banco temporário separado, removido depois.
 
 ## 3. Relacionamentos
 

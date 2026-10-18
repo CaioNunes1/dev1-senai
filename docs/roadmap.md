@@ -57,7 +57,7 @@ Swagger, logs e lint são configurados na Etapa 1 e mantidos a cada etapa (mais 
 - **Validação:** `cd backend && npm ci && npm run lint && npm run format:check && npm test && npm run test:e2e && npm run build`.
 - **Commits sugeridos:** `chore: inicializa repositório com docker compose do banco` · `feat(backend): cria api nestjs com prefixo /api/v1, cors e logs` · `feat(backend): adiciona tratamento central de erros e validação de ids`.
 
-## Etapa 2 — Modelo de dados e migrations
+## Etapa 2 — Modelo de dados e migrations ✅ (17/10/2026)
 
 - **Objetivo:** schema Prisma com as 7 tabelas e a migration inicial.
 - **Regras:** "3. Estrutura de tabelas", RN10 (unicidade), B3.
@@ -72,11 +72,11 @@ Swagger, logs e lint são configurados na Etapa 1 e mantidos a cada etapa (mais 
 | Subetapa | Escopo | Etapa original | Depende de |
 | --- | --- | --- | --- |
 | 3.1 ✅ | Regras de domínio e cálculos (RN02–RN06) | 3 | — |
-| 3.2 | `POST /players`, `GET /players/{id}`, DTOs, persistência | 4 (parte) | **Etapa 2 (schema + migration)** |
-| 3.3 | `PUT`, `PATCH /condition`, `DELETE` (RN08, RN09) | 4 (parte) | 3.2 |
-| 3.4 | `GET /players` (RN07) | 6 | 3.2 |
+| 3.2 ✅ | `POST /players`, `GET /players/{id}`, DTOs, persistência | 4 (parte) | Etapa 2 ✅ |
+| 3.3 ✅ | `PUT`, `PATCH /condition`, `DELETE` (RN08, RN09) | 4 (parte) | 3.2 |
+| 3.4 ✅ | `GET /players` (RN07) | 6 | 3.2 |
 
-> **Inconsistência registrada (15/10/2026):** a Etapa 2 (modelo de dados) ainda não foi executada. O `schema.prisma` só tem `datasource` e `generator`, e não há migrations. A 3.1 não depende do banco; a 3.2 depende.
+> A Etapa 2 foi executada depois da 3.1 (17/10/2026). Hoje não há mais pendências de banco para a 3.2.
 
 ### Etapa 3.1 — Domínio de jogadores ✅ (15/10/2026)
 
@@ -109,9 +109,15 @@ Swagger, logs e lint são configurados na Etapa 1 e mantidos a cada etapa (mais 
 
 Tabela, paginação, filtros, ordenação, cadastro/edição/condição com validação de campo, excluir com confirmação. Commits por funcionalidade.
 
-## Etapa 8 — Clubes
+## Etapa 8 — Clubes (backend chamado de "Etapa 4" pelo usuário, dividido em subetapas)
 
-API: RN10 (sigla como subsequência, normalização, 20 clubes), RN11 sem contrato; telas de listagem/criação/página do clube (esqueleto das abas). Commits separados backend/frontend.
+| Subetapa | Escopo | Situação |
+| --- | --- | --- |
+| 4.1 | `POST /clubs`: RN10 (nome, sigla, unicidade, 20 clubes, caixa 300,00) | ✅ 17/10/2026 |
+| 4.2 | `GET /clubs` (sort `name`, `net_worth_asc`, `net_worth_desc`) e `GET /clubs/{id}`; valor do elenco e patrimônio calculados | aguardando aprovação |
+| 4.3 | Elenco na ordem da RN11, contrato de cada jogador (fim da fidelidade, dias restantes, % de multa) | depende dos jogadores (3.2) e da compra |
+
+As telas de clubes (frontend) continuam previstas aqui, em commits separados.
 
 ## Etapa 9 — Compra
 

@@ -41,11 +41,16 @@ backend/src/
 │   ├── validation/             StrictValidationPipe, fábrica de erro de validação; depois, decorators e parsers de query
 │   ├── clock/                  (Etapa 4) Clock — provider injetável de "agora"
 │   └── domain/                 rounding.ts (único arredondamento), money.ts (Cents); depois datetime (RN01), text (V4, ordenação)
-├── players/                    RN02–RN09
-│   ├── domain/                 player.types.ts, overall.ts, base-value.ts, market-value.ts (3.1 ✅); player-ordering.ts (3.4)
-│   ├── dto/  players.controller.ts  players.service.ts  player.mapper.ts
+├── players/                    RN02–RN09 (✅ 3.1–3.4)
+│   ├── domain/                 player.types.ts, player.limits.ts, overall.ts, base-value.ts, market-value.ts,
+│   │                           condition-transition.ts, player-listing.ts (busca, faixa de valor, ordenação)
+│   ├── dto/                    create-player, update-player, update-condition, player-input.rules,
+│   │                           player-list-query (parser + pipe), player-response
+│   ├── players.controller.ts  players.service.ts  player.mapper.ts (marketValueOf, toPlayerResponse)
 ├── clubs/                      RN10, RN11
-│   ├── domain/                 acronym.ts, club-ordering.ts
+│   ├── domain/                 club.rules.ts (20 clubes, caixa inicial, chave do nome), acronym.ts (4.1 ✅); club-ordering.ts (4.2)
+│   ├── dto/                    create-club.dto.ts, club-input.rules.ts, club-response.dto.ts
+│   ├── clubs.controller.ts  clubs.service.ts  club.mapper.ts  clubs.module.ts
 ├── market/                     RN12–RN18 (compra, venda, contratos, histórico, CSV)
 │   ├── domain/                 purchase.ts (taxa, limite), loyalty-penalty.ts (dias + %), sale.ts (lucro, comissão, crédito), transactions-csv.ts
 ├── league/                     RN19–RN21 (escalação, partidas, classificação)

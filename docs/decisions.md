@@ -33,7 +33,7 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
   - `common/domain/rounding.ts` › `divideRoundingHalfAwayFromZero(n, d)`: quociente por resto inteiro (`%`) e subtração; arredonda para longe do zero quando `2 × resto ≥ d`. É o **único** ponto de arredondamento do backend (moeda e overall). Recusa operandos não inteiros, para que nenhum float entre por engano.
   - `common/domain/money.ts` › tipo `Cents` (alias de `number` inteiro), para deixar a unidade explícita nas assinaturas.
   - Percentuais do valor de mercado em **per mille** (15% = 150‰; 7,5% = 75‰): `valor = base × (1000 + total‰) ÷ 1000`, arredondado uma vez. Valor base e overall entram já arredondados nos cálculos seguintes, como manda o enunciado.
-  - `Prisma.Decimal` não entra no domínio: a conversão `NUMERIC ↔ Cents` fica no mapper (Etapa 3.2), por exemplo `Number(decimal.toFixed(2).replace('.', ''))`, sem passar por multiplicação em float.
+  - `Prisma.Decimal` não entra no domínio: a conversão `NUMERIC ↔ Cents` fica em `prisma/decimal.ts` (`decimalToCents` = `decimal.times(100).toNumber()`; `centsToDecimal` = `new Decimal(cents).dividedBy(100)`), com aritmética decimal exata, nunca multiplicação em float. Usada pelos mappers e na gravação (Etapa 4.1).
 
 ## ADR-003 — Validação com class-validator + exceptionFactory próprio
 
@@ -71,6 +71,7 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
 - **Status:** Aceita (15/10/2026; detalhar na etapa de compra)
 - **Decisão:** `prisma.$transaction` interativa por operação; dentro dela, `SELECT … FOR UPDATE` (SQL parametrizado) em clube e jogador antes de validar caixa/elenco/estado.
 - **Alternativas:** isolamento `Serializable` com retry (mais genérico, mais difícil de explicar); updates condicionais (`updateMany where clubId: null` + checar `count`) — boa opção para o jogador, mas não cobre o caixa.
+- **Aplicada (18/10/2026):** `PUT /players/{id}`, `PATCH /players/{id}/condition` e `DELETE /players/{id}` já travam a linha do jogador ativo (`SELECT id FROM jogadores WHERE id = … AND excluido_em IS NULL FOR UPDATE`, em `PlayersService.lockActivePlayer`) antes das checagens de 409. A compra e a venda vão travar a mesma linha, então essas operações não se cruzam.
 
 ## ADR-008 — Relógio injetável
 
@@ -108,3 +109,25 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
   2. A aplicação lança só erros próprios (`InvalidInputError` 400, `ResourceNotFoundError` 404, `BusinessRuleError` 409). O filtro usa a mensagem deles; `HttpException` vinda do framework recebe um texto padrão por status. Isso evita detectar erros comparando textos de mensagens.
 - **Alternativas:** `transform: false` (perderia a remoção dos campos extras do corpo, V7); tipar o parâmetro como `string` (o tipo TS seria mentiroso após o pipe); comparar `message.startsWith('Cannot ')` (frágil).
 - **Consequências:** services e pipes ficam independentes de classes HTTP do Nest; os testes de regressão estão em `backend/test/app.e2e-spec.ts`.
+
+## ADR-013 — Uma regra de validação por campo (`SatisfiesRule`)
+
+- **Status:** Aceita (17/10/2026, Etapa 4.1)
+- **Contexto:** campos como o nome do clube têm várias condições em ordem (obrigatório → texto → sem controle → tamanho → caracteres → palavras). Com um decorator por condição, o class-validator avalia todos e pode devolver uma mensagem que não é a da causa real (ex.: "tamanho inválido" para um `null`).
+- **Decisão:** cada campo com regra composta usa uma função pura `(value, object) => mensagem | undefined`, aplicada por um único decorator genérico (`common/validation/validation-rule.decorator.ts`). As condições ficam em ordem e são testáveis sem HTTP (`clubs/dto/club-input.rules.ts`). A V4 é aplicada antes por `@NormalizeSpaces()`.
+- **Alternativas:** vários decorators do class-validator com `stopAtFirstError` (a ordem de avaliação depende da ordem de registro dos decorators, que é pouco evidente); validação no service (o barema exige mecanismo declarado antes do endpoint).
+- **Consequências:** mensagens precisas e regras reaproveitáveis pelo cadastro de jogadores.
+
+## ADR-014 — Criação de clube serializada por advisory lock
+
+- **Status:** Aceita (17/10/2026, Etapa 4.1)
+- **Contexto:** o limite de 20 clubes (RN10) depende de uma contagem. Com isolamento READ COMMITTED, dois pedidos simultâneos podem contar 19 e gravar o 20º e o 21º. As unicidades de nome e sigla já têm índice único, mas o limite não tem restrição no banco.
+- **Decisão:** a criação roda numa transação que começa com `SELECT pg_advisory_xact_lock(10001)` (SQL parametrizado). As criações de clube entram em fila, e o lock é liberado sozinho no fim da transação. Os índices únicos continuam como última garantia: erro `P2002` vira 409.
+- **Alternativas:** isolamento `Serializable` com nova tentativa (mais código para tratar `P2034`); `LOCK TABLE clubes` (bloqueia também as leituras de clubes); trigger no banco (regra fora do código da aplicação).
+- **Evidência:** teste e2e com 4 pedidos simultâneos a partir de 18 clubes resulta em exatamente 20. Removendo o lock (mutação temporária), o teste falhou nas 3 execuções.
+
+## ADR-015 — Banco exclusivo para os testes e2e
+
+- **Status:** Aceita (17/10/2026, Etapa 4.1)
+- **Decisão:** os e2e usam `passe_test`, no mesmo container, com URL fixa ou `TEST_DATABASE_URL`. O `globalSetup` aplica as migrations (`migrate deploy`, que cria o banco se não existir); cada teste começa com `TRUNCATE … RESTART IDENTITY`. Uma trava recusa limpar qualquer banco cujo nome não termine em `_test`. Os e2e rodam em sequência (`maxWorkers: 1`), porque compartilham o banco.
+- **Consequências:** o banco de desenvolvimento nunca é tocado pelos testes; `npm run test:e2e` exige o container do banco ligado. `npm test` (unitários) continua sem depender de banco, que é o comando do diferencial B5.

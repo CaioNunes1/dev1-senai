@@ -15,11 +15,22 @@ Estudo de Caso SENAI/PE – CÓD. 237 Desenvolvedor I (Fullstack). Enunciado ofi
 ## 2. Banco de dados
 
 ```bash
-# Na raiz do repositório: inicia o PostgreSQL
+# Na raiz do repositório: inicia o PostgreSQL (porta 5433 no host)
 docker compose up -d db
+
+# Na pasta backend: cria as tabelas pelas migrations versionadas
+cd backend
+cp .env.example .env
+npm ci
+npx prisma migrate deploy
 ```
 
-Os comandos de criação e recriação das tabelas (migrations do Prisma) entram na Etapa 2.
+Recriar o banco do zero (apaga tudo e aplica as migrations de novo; o banco volta vazio):
+
+```bash
+# Na pasta backend
+npx prisma migrate reset --force
+```
 
 ## 3. Instalar e executar
 
@@ -40,7 +51,7 @@ npm run start:prod
 
 ```bash
 npm test              # testes unitários (terminam sozinhos)
-npm run test:e2e      # testes e2e da API
+npm run test:e2e      # testes e2e da API (exigem o banco ligado; usam o banco separado passe_test)
 npm run lint          # ESLint
 npm run format:check  # Prettier, só verifica
 ```
@@ -54,12 +65,13 @@ Arquivo de exemplo: [backend/.env.example](backend/.env.example).
 | `DATABASE_URL` | conexão do Prisma com o PostgreSQL | `postgresql://passe:passe@localhost:5433/passe?schema=public` |
 | `PORT` | porta HTTP da API (padrão 3000) | `3000` |
 | `CORS_ORIGIN` | origens do frontend liberadas no CORS, separadas por vírgula (nunca `*`) | `http://localhost:5173` |
+| `TEST_DATABASE_URL` | opcional, só nos testes e2e: banco de testes (padrão abaixo; o nome precisa terminar em `_test`) | `postgresql://passe:passe@localhost:5433/passe_test?schema=public` |
 
 ## 5. Estrutura de pastas e bibliotecas
 
 ```text
 backend/              API NestJS
-├── prisma/           schema do Prisma (e migrations, a partir da Etapa 2)
+├── prisma/           schema do Prisma e migrations versionadas
 ├── src/
 │   ├── common/       erros, pipes, filtro de exceções, logs e validação compartilhados
 │   ├── config/       leitura e validação das variáveis de ambiente

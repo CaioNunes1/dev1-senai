@@ -65,7 +65,10 @@ Projeto de entrega do **Estudo de Caso SENAI/PE – CÓD. 237 Desenvolvedor I (F
 
 | Objetivo | Comando | Pasta |
 | --- | --- | --- |
-| Subir banco | `docker compose up -d db` | raiz |
+| Subir banco | `docker compose up -d db` (porta **5433** no host) | raiz |
+| Criar tabelas | `npx prisma migrate deploy` | backend |
+| Nova migration (dev) | `npx prisma migrate dev --name <descricao>` | backend |
+| Recriar banco do zero | `npx prisma migrate reset --force` (**só com autorização** no banco de dev) | backend |
 | Instalar | `npm ci` (roda `prisma generate`) | backend |
 | Build / executar | `npm run build` · `npm run start:prod` · `npm run start:dev` | backend |
 | Testes | `npm test` (unitários) · `npm run test:e2e` | backend |
@@ -75,4 +78,16 @@ Notas da Etapa 1:
 - Versões fixadas: Nest 11, TypeScript 5.9, Prisma 6, ESLint 9 (motivos na ADR-001). Não atualizar majors sem nova ADR.
 - Nunca usar `ValidationPipe`/`ParseIntPipe` padrão: usar `StrictValidationPipe` (global) e `ParseIdPipe` (ADR-012).
 - Lançar `InvalidInputError` / `ResourceNotFoundError` / `BusinessRuleError`, não `HttpException`.
-- Para parar um servidor iniciado em teste manual, encerrar **pelo PID**, nunca todos os processos `node`.
+- Para parar um servidor iniciado em teste manual, encerrar **pelo PID**, nunca todos os processos `node`. No Windows, o `kill` do Git Bash não encerra o `node.exe`: usar `Stop-Process -Id <pid>` no PowerShell (achar o PID com `Get-NetTCPConnection -LocalPort 3000`).
+- Testes manuais com acentos: não usar `curl` do Git Bash (corrompe acentos); usar `fetch` do Node, o Swagger ou o Postman.
+
+Notas da Etapa 4.1:
+- E2E usam o banco `passe_test` (ADR-015); nunca apontar testes para `passe`. `npm run test:e2e` exige o container ligado.
+- Campo com regra composta: função pura `(value, object) => mensagem | undefined` + `@SatisfiesRule` (ADR-013); V4 com `@NormalizeSpaces()`.
+- Decimal ↔ centavos só por `prisma/decimal.ts`; `Location` por `resourceLocation()` (`common/http/api.constants.ts`).
+
+Notas das Etapas 3.2–3.4:
+- Query params: validar e converter com os parsers de `common/validation/query-params.ts` num pipe (`PlayerListQueryPipe` é o modelo); nunca ler `@Query()` cru no service.
+- Valor de mercado de um jogador gravado: sempre `marketValueOf(player)` (`players/player.mapper.ts`), que é a única ponte para `calculateMarketValue`.
+- Dados de teste com empates devem ter ids em ordem **contrária** à dos nomes, senão o desempate por nome não é verificado (achado por mutação em 18/10).
+- Testes e2e completos levam ~1,5 min; rodar em sequência, nunca com outro e2e em paralelo.
