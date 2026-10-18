@@ -109,29 +109,40 @@ Erros: qualquer exceção → AllExceptionsFilter → { message } + status (400/
 
 Detalhes de telas e tokens em [frontend-design.md](frontend-design.md).
 
+Estrutura após a Etapa 5.1 (✅ = existe; o resto entra com a tela que o usa):
+
 ```text
-frontend/src/
-├── app/            App, rotas (React Router declarativo), layout, providers
-├── shared/
-│   ├── api/        httpClient (fetch), ApiError, base URL de VITE_API_URL
-│   ├── components/ DataTable (loading/empty/error), FormField, Button, ConfirmDialog,
-│   │               Pagination, Feedback/Toast, Tabs, Badge
-│   ├── hooks/      useQuery-like (carregar + refetch), useAction (pendente + guarda de duplo envio)
-│   └── lib/        formatMoney, formatDateTime, toBrasiliaOffset (datetime-local → -03:00)
-├── features/
-│   ├── players/    api.ts, hooks, schemas (Zod), components, PlayersPage
-│   ├── clubs/      api.ts, ClubsPage, ClubDetailPage (abas Elenco · Histórico · Escalação)
-│   ├── market/     BuyDialog, SellDialog, TransactionsTab, export
-│   └── league/     LineupTab, MatchesPage, MatchDetail, StandingsPage
-└── main.tsx
+frontend/
+├── index.html, vite.config.ts (Vite + Tailwind + Vitest), eslint.config.js, .prettierrc, .env.example
+├── public/favicon.svg          marca "P" exportada do Figma
+└── src/
+    ├── main.tsx                 ✅ monta <App/> e importa os estilos
+    ├── app/
+    │   ├── App.tsx              ✅ BrowserRouter + DataRefreshProvider
+    │   ├── AppRoutes.tsx        ✅ rotas declarativas (modo biblioteca)
+    │   └── layout/              ✅ AppLayout, Sidebar, Topbar, navigation.ts (rotas, menu, trilha)
+    ├── shared/
+    │   ├── api/http-client.ts   ✅ apiRequest, ApiError, URL base de VITE_API_URL + /api/v1
+    │   ├── hooks/               ✅ useApiQuery, DataRefreshProvider/useDataRefresh · useApiAction (5.3)
+    │   ├── components/          ✅ Button, Card, PageHeader · DataTable, Pagination, Badge (5.2) · FormField, Dialog, Toast (5.3)
+    │   └── lib/                 ✅ cx · formatadores de moeda e data (5.2)
+    ├── features/
+    │   ├── players/             ✅ PlayersPage (provisória) · api.ts, componentes da lista e formulários (5.2–5.3)
+    │   ├── clubs/               ✅ api.ts (GET /clubs), useClubs, ClubsPage e ClubDetailPage (provisórias, 5.4)
+    │   ├── market/              compra, venda, histórico e CSV
+    │   └── league/              ✅ MatchesPage e StandingsPage (provisórias) · escalação, partidas
+    ├── styles/index.css         ✅ Tailwind v4 + tokens do Figma (@theme)
+    └── test/                    ✅ setup do Vitest, mock de fetch
 ```
 
 Regras:
 
-- Componentes **não chamam** `fetch`: `features/*/api.ts` (funções tipadas) → hooks → componentes.
+- Componentes **não chamam** `fetch`: `features/*/api.ts` (funções tipadas, campos no formato da API, ADR-018) → hooks → componentes. A única chamada a `fetch` do projeto está em `shared/api/http-client.ts`.
+- Recusas viram `ApiError` com o `message` da API e o `status`; falha de rede vira `ApiError` com `status = null` e texto próprio.
 - Valores calculados (valor de mercado, multa, classificação…) são **apenas exibidos**. Ordem das listas = ordem da API.
-- Após cada uma das 9 ações, o hook refaz a consulta afetada (sem recarregar a página).
+- Após cada uma das 9 ações, a ação chama `refreshAll()` e todas as consultas abertas recarregam, sem recarregar a página (ADR-009).
 - Mensagens: sucesso padronizado; erro mostra o `message` da API.
+- Componentes compartilhados só nascem quando uma tela precisa deles (ADR-017); componentes de uma única feature ficam na pasta dela.
 
 ## 3. Infraestrutura
 

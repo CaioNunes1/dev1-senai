@@ -73,6 +73,15 @@ Projeto de entrega do **Estudo de Caso SENAI/PE – CÓD. 237 Desenvolvedor I (F
 | Build / executar | `npm run build` · `npm run start:prod` · `npm run start:dev` | backend |
 | Testes | `npm test` (unitários) · `npm run test:e2e` | backend |
 | Qualidade | `npm run lint` · `npm run format:check` | backend |
+| Instalar / executar | `npm ci` · `npm run dev` (http://localhost:5173) | frontend |
+| Testes / qualidade / build | `npm test` · `npm run lint` · `npm run format:check` · `npm run build` | frontend |
+
+Notas da Etapa 5.1 (frontend):
+- Figma lido pela **cópia** `Gin5aRF66GIyoTTOUbEygQ` (o conector exige permissão de edição); "Telas · Desktop" = nó `2:2`. Telas mobile **fora do escopo** (decisão do usuário); o layout só não pode ter rolagem horizontal em 375 px.
+- Cores, raios, sombras e medidas só por tokens de `src/styles/index.css` (`@theme`); nada de hexadecimal ou `[valor]` arbitrário nos componentes. Ícones: `lucide-react` (o Figma indica o nome de cada um).
+- `fetch` só em `shared/api/http-client.ts`; funções por recurso em `features/*/api.ts`; leitura com `useApiQuery`; depois de cada ação gravada, `refreshAll()` (ADR-009).
+- Tipos no formato da API (snake_case), sem conversão (ADR-018). Componentes próprios, sem shadcn/ui (ADR-017); criar um componente compartilhado só quando uma tela o usar.
+- Verificação visual: Chrome headless pelo protocolo DevTools (`Emulation.setDeviceMetricsOverride`), porque `--window-size` não desce a 375 px. Encerrar Vite e Chrome pelo PID (portas 5173 e a do DevTools).
 
 Notas da Etapa 1:
 - Versões fixadas: Nest 11, TypeScript 5.9, Prisma 6, ESLint 9 (motivos na ADR-001). Não atualizar majors sem nova ADR.

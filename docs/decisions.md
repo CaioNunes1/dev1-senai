@@ -86,6 +86,7 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
 - **Contexto:** o enunciado sugere `useState`/`useEffect`; cada ação precisa refazer a consulta afetada e impedir duplo envio.
 - **Decisão:** hooks próprios pequenos (`useQuery`-like com `refetch` e `AbortController`; `useAction` com estado pendente + guarda por `ref`).
 - **Alternativa:** TanStack Query (cache, invalidação e estados prontos; +1 dependência a justificar).
+- **Implementação (Etapa 5.1, 18/10/2026):** `shared/hooks/use-api-query.ts` carrega com `AbortController`, descarta respostas atrasadas e expõe `data`, `error`, `isLoading` e `retry`. A atualização sem recarregar a página usa uma "versão dos dados" (`DataRefreshProvider`): `refreshAll()` muda a versão e **todas** as consultas abertas recarregam. Com poucas consultas por tela, recarregar tudo é mais simples e mais seguro que escolher o que invalidar (nenhuma ação deixa dado velho na tela, como o caixa no menu de clubes). Quem chama `refreshAll`: o botão "Atualizar dados" do topo (hoje) e o futuro `useApiAction`, depois de cada ação gravada (Etapa 5.3).
 
 ## ADR-010 — Formulários com React Hook Form + Zod
 
@@ -132,3 +133,42 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
 - **Status:** Aceita (17/10/2026, Etapa 4.1)
 - **Decisão:** os e2e usam `passe_test`, no mesmo container, com URL fixa ou `TEST_DATABASE_URL`. O `globalSetup` aplica as migrations (`migrate deploy`, que cria o banco se não existir); cada teste começa com `TRUNCATE … RESTART IDENTITY`. Uma trava recusa limpar qualquer banco cujo nome não termine em `_test`. Os e2e rodam em sequência (`maxWorkers: 1`), porque compartilham o banco.
 - **Consequências:** o banco de desenvolvimento nunca é tocado pelos testes; `npm run test:e2e` exige o container do banco ligado. `npm test` (unitários) continua sem depender de banco, que é o comando do diferencial B5.
+
+## ADR-016 — Versões e bibliotecas do frontend
+
+- **Status:** Aceita (18/10/2026, Etapa 5.1)
+- **Contexto:** o regulamento aceita React 18+ com Vite (template oficial) e Node 20/22 LTS; React Router só no modo biblioteca. A banca instala o Node 22 e executa `npm ci`; uma dependência que exija versão mais nova do Node quebra a instalação.
+- **Decisão** (versões conferidas com `npm view` em 18/10/2026):
+
+  | Pacote | Escolhida | Mais recente | Motivo |
+  | --- | --- | --- | --- |
+  | React / React DOM | 19.3 | 19.3 | `useEffectEvent` estável (usado no `useApiQuery`) |
+  | Vite + `@vitejs/plugin-react` | 8.3 / 6.1 | igual | Node `^20.19 \|\| >=22.12` |
+  | React Router | 7.18 | 8.4 | o 8 exige Node `>=22.22`, risco na máquina da banca; o 7 tem o modo biblioteca (`BrowserRouter`/`Routes`) maduro |
+  | Tailwind CSS + `@tailwindcss/vite` | 4.3 | igual | tokens em CSS (`@theme`), sem arquivo de configuração |
+  | TypeScript | 5.9 | 7.0 | mesma versão do backend; `typescript-eslint` 8 aceita `<6.1` |
+  | ESLint | 9.39 | 10.x | mesma linha do backend (ADR-001) |
+  | Vitest + jsdom | 4.1 + 29.1 | 5.0 + 30.1 | o jsdom 30 exige Node `>=22.22`; o Vitest 4 aceita Node 20/22 |
+  | Testing Library (`react`, `dom`, `jest-dom`, `user-event`) | 16 / 10 / 6 / 14 | — | testes de componente pelo comportamento visível |
+  | `lucide-react` | 1.59 | igual | o Figma identifica cada ícone como Lucide (descrição dos componentes `Icon/*`); usar o pacote mantém o traço idêntico sem copiar SVGs |
+  | `@fontsource-variable/geist` | 5.3 | igual | fonte Geist do Figma servida pelo próprio build (sem CDN em tempo de execução) |
+
+- **Adiadas:** React Hook Form e Zod (ADR-010) entram na Etapa 5.3, com o primeiro formulário; instalar antes deixaria dependências sem uso.
+- **Alternativas:** Axios (o `fetch` nativo basta: um cliente de 100 linhas cobre prefixo, JSON, erros e cancelamento); `prettier-plugin-tailwindcss` (ordenação de classes; dispensável).
+- **Consequências:** `npm audit` sem vulnerabilidades na instalação. O `eslint@9` aparece como "não suportado" no npm desde o lançamento do 10; atualizar exige nova ADR para as duas pastas.
+
+## ADR-017 — Componentes próprios com os tokens do Figma, sem shadcn/ui
+
+- **Status:** Aceita (18/10/2026, Etapa 5.1)
+- **Contexto:** o design system do Figma foi feito sobre o shadcn/ui (nomes de variáveis, descrições "shadcn/ui Button", "shadcn/ui Sidebar"). O shadcn/ui é permitido pelo enunciado, mas copia componentes para o projeto e traz dependências (Radix, `class-variance-authority`, `tailwind-merge`, `clsx`).
+- **Decisão:** componentes próprios, pequenos, criados quando uma tela precisa deles, com os **mesmos nomes de tokens** do Figma em `@theme`. Variantes por mapas de classes (`Button`) e um `cx` de 3 linhas para classes condicionais.
+- **Alternativas:** `npx shadcn init` + componentes (fidelidade imediata, mas dezenas de arquivos e variantes sem uso, o que pesa no F2 › código sem uso); MUI (visual diferente do mockup).
+- **Consequências:** cada componente tem só as variantes usadas; dialogs e menus precisarão de cuidado próprio com foco e teclado (Etapa 5.3: `<dialog>` nativo).
+
+## ADR-018 — Tipos do frontend no formato da API (snake_case), sem conversão
+
+- **Status:** Aceita (18/10/2026, Etapa 5.1)
+- **Contexto:** a API responde em snake_case (`squad_value`, `net_worth`); identificadores do código são em camelCase. O barema (F2 › nomes fora do padrão) não conta campos da API em snake_case.
+- **Decisão:** os tipos em `features/*/api.ts` espelham o contrato da API; não há camada de conversão. Variáveis e funções do frontend continuam em camelCase.
+- **Alternativas:** converter na camada `api/` (mais código e um ponto a mais de erro, sem ganho para o avaliador; o mesmo nome aparece no Swagger, no README oficial e na tela).
+- **Consequências:** a URL base vem de `VITE_API_URL` (origem sem `/api/v1`; o cliente acrescenta o prefixo e aceita a origem já com ele); sem a variável, usa `http://localhost:3000`, para o caminho do README funcionar sem `.env` no frontend.

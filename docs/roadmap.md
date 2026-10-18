@@ -18,7 +18,7 @@ Prazo: **sexta-feira, 23/10/2026, 20h (Brasília)**. Hoje: 15/10. Errata previst
 | 2 | Modelo de dados e migrations | backend | B3 | 16/10 |
 | 3 | Domínio de jogadores (cálculos puros) | backend | B05, B06, B5 (testes) | 16/10 |
 | 4 | API de jogadores (CRUD + condição + exclusão) | backend | B01–B04, B06, B08 | 17/10 |
-| 5 | Fundação do frontend | frontend | F2, F3, F5 (lint) | 17/10 |
+| 5 | Frontend: fundação (5.1 ✅ 18/10), jogadores (5.2–5.3), clubes (5.4) | frontend | F2, F3, F5 (lint) | 18–20/10 |
 | 6 | Listagem de jogadores (API) | backend | B07 | 17–18/10 |
 | 7 | Tela de jogadores | frontend | F01–F04 | 18/10 |
 | 8 | Clubes (API + telas) | ambos | B09, F05 | 18–19/10 |
@@ -93,11 +93,24 @@ Swagger, logs e lint são configurados na Etapa 1 e mantidos a cada etapa (mais 
 - **Critérios de aceite:** exemplo "Meia Lua" (201 + `Location`, valor base 40,00, MAL_CONDICIONADO → 37,00); cada linha de "Limites de cada campo" com aceite e recusa; campos controlados ignorados; DOENTE→APTO 409; idade menor 409; excluído = 404 em todos.
 - **Commits:** `feat(backend): cadastra e consulta jogadores` · `feat(backend): edita jogador e altera condição física` · `feat(backend): exclui jogador logicamente`.
 
-## Etapa 5 — Fundação do frontend
+## Etapa 5 — Frontend, dividido em subetapas (definido pelo usuário em 18/10/2026)
 
-- **Objetivo:** Vite + React + TS + Tailwind v4 + Router, layout/navegação, `httpClient`, componentes compartilhados (DataTable com 3 estados, FormField, Feedback, ConfirmDialog, ActionButton, Pagination), formatadores, ESLint/Prettier/Vitest.
-- **Critérios de aceite:** lint, format:check, `npm test` (≥1 teste de componente) e build sem erros; `ActionButton` com teste de duplo clique = 1 chamada.
-- **Commits:** `chore(frontend): cria projeto react com vite, tailwind e lint` · `feat(frontend): adiciona layout, rotas e cliente http` · `feat(frontend): cria componentes compartilhados de tabela, formulário e feedback`.
+Prioridades do usuário: arquitetura simples, fidelidade aos fluxos do enunciado, consistência com o design system do Figma, componentes reutilizáveis sem abstração desnecessária, integração real com a API, estados de carregamento/erro/vazio, responsividade, testes. Telas mobile do Figma fora do escopo (só desktop, sem quebrar em 375 px).
+
+| Subetapa | Escopo | Situação |
+| --- | --- | --- |
+| 5.1 | Fundação: Vite/React/TS, Tailwind + tokens do Figma, layout (sidebar, topo), rotas iniciais, cliente HTTP, lint/format/testes, documentação | ✅ 18/10/2026 |
+| 5.2 | Tela de jogadores: lista integrada, tabela do Figma (J01), paginação, filtros, ordenação, estados, rolagem interna da tabela | próxima |
+| 5.3 | Operações de jogadores: cadastro, edição, condição, exclusão com confirmação, mensagens; `useApiAction` com guarda de duplo clique | |
+| 5.4 | Clubes: lista e ordenação, cadastro, página do clube com resumo financeiro e elenco | |
+
+As telas de compra, venda, histórico e liga são planejadas depois, com os endpoints restantes do backend.
+
+### Etapa 5.1 — Fundação do frontend ✅ (18/10/2026)
+
+- **Critérios de aceite:** `npm run lint`, `npm run format:check`, `npm test` e `npm run build` sem erros; rotas `/players`, `/clubs`, `/clubs/:id`, `/matches`, `/standings` navegáveis pelo menu; menu de clubes vindo de `GET /clubs` com estados de carregamento, vazio e erro; botão "Atualizar dados" recarrega sem recarregar a página; sem rolagem horizontal em 1366 e 375 px.
+- **Commits sugeridos:** `chore(frontend): cria projeto react com vite, tailwind, lint e testes` · `feat(frontend): adiciona tokens do figma, layout com menu lateral e rotas` · `feat(frontend): adiciona cliente http e consulta de clubes no menu`.
+- **Critério herdado do plano original para a 5.3:** botão de ação com teste de duplo clique = 1 chamada.
 
 ## Etapa 6 — Listagem de jogadores (API)
 

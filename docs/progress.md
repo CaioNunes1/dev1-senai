@@ -2,21 +2,22 @@
 
 ## Estado atual
 
-- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda (18/10/2026).
+- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda; **5.1 — Fundação do frontend** (18/10/2026).
 - **Backend:** 11 das 19 rotas do enunciado prontas. Faltam histórico e CSV (RN17–RN18), escalação (RN19), partidas e classificação (RN20–RN21).
-- **Próxima etapa sugerida:** fundação do frontend (prazo dos dias de push em `frontend/`); depois histórico, liga e as telas correspondentes.
-- **⚠️ Frontend não iniciado:** o barema exige push em ≥3 dias distintos com commits em `frontend/`; o prazo é 23/10.
-- **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Push em 17/10: commit `845f573` (Etapas 0, 1 e 3.1 juntas). Etapas 2, 4.1 e 3.2–3.4 ainda não commitadas.
+- **Frontend:** layout do Figma (menu lateral, topo, trilha), rotas, cliente HTTP e menu de clubes integrado a `GET /clubs`. Telas de lista ainda provisórias.
+- **Próxima etapa:** 5.2 — tela de jogadores (aguarda autorização do usuário).
+- **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; o primeiro dia possível é 18/10 (Etapa 5.1 ainda não commitada). Prazo: 23/10.
+- **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (commits do backend até `1ee2caf`).
 
 ## Pendências e bloqueios
 
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | Iniciar o Docker Desktop e validar `docker compose up -d db` + conexão do Prisma | — | ✅ resolvido: porta do host trocada para **5433** (ver abaixo) |
-| Node.js 22 local (máquina tem v24.15.0; `engines` pede 22.x) | usuário | decidir |
+| Node.js 22 local (máquina tem v24.15.0; `engines` pede 22.x) | usuário | decidir. O frontend exige Node ≥ 22.12 (Vite 8); as dependências foram escolhidas para não exigir 22.22 (ADR-016) |
 | `user.email` noreply no Git (o 1º commit saiu com o Gmail pessoal; recomendação, não eliminatória) | usuário | pendente para os próximos commits |
 | Commits: ≥10 em `backend/` e ≥10 em `frontend/`, push em ≥3 dias distintos por pasta | usuário | 1º dia de push: 17/10 |
-| Acesso ao Figma (conector ou exportação das 3 páginas) | usuário | pendente |
+| Acesso ao Figma | — | ✅ 18/10: lido pela cópia `Gin5aRF66GIyoTTOUbEygQ` (o conector recusou o arquivo oficial por falta de permissão de edição). Tokens e mapeamento em `docs/frontend-design.md`. Telas mobile fora do escopo por decisão do usuário |
 | Conferir errata | agente, a cada etapa | 17/10: nenhuma errata no repositório oficial; issue #4 (Spring) não nos afeta |
 | Vulnerabilidades do `npm audit` (exigem majors; ver ADR-001) | revisão final | risco aceito |
 
@@ -36,6 +37,28 @@
 | — | Compra (RN12–RN14) | ✅ 18/10 | ver "Mercado" | `POST /players/{id}/buy` |
 | 4.3 | Elenco com contratos (RN11, RN15) | ✅ 18/10 | ver "Mercado" | dias e % de multa na consulta |
 | — | Venda (RN15–RN16) | ✅ 18/10 | ver "Mercado" | `POST /players/{id}/sell` |
+| 5.1 | Fundação do frontend | ✅ 18/10 | ver "Etapa 5.1" | ADR-016, ADR-017, ADR-018; implementação da ADR-009 |
+
+### Etapa 5.1 — o que foi validado (18/10/2026)
+
+| Verificação | Resultado |
+| --- | --- |
+| `npm test` (frontend) | 3 arquivos, 26 testes ok: cliente HTTP (URL base, query params, corpo JSON, `message` da API em 400/404/409, resposta sem `message`, falha de rede, corpo vazio), trilha de navegação, layout integrado às rotas (raiz → jogadores, menu ativo, clubes da API na ordem recebida, navegação até um clube, erro com "Tentar de novo", lista vazia, "Atualizar dados") |
+| Mutações | `message` da API trocado por texto genérico → 4 testes falharam; versão de atualização removida da consulta → 1 teste falhou; código restaurado |
+| `npm run lint` / `npm run format:check` / `npm run build` | ok, sem avisos; build com 279 kB de JS (89 kB gzip) |
+| `npm install` | 0 vulnerabilidades |
+| Aplicação real (backend `node dist/main.js` + `npm run dev`, banco de dev vazio) | rotas carregam; menu mostra "Nenhum clube cadastrado." vindo da API; trilha "Mercado › Clubes › Clube 99" em clube inexistente; com o backend parado, o menu mostra a mensagem de falha de conexão e "Tentar de novo" |
+| Larguras (Chrome headless, protocolo DevTools) | 1366 × 768: sem rolagem horizontal, painel e menu como no J01; menu recolhido em 48 px como o nó `9:18078`; 375 × 812: `scrollWidth` = 375, menu abre sobreposto com fundo `overlay` |
+| Comparação visual com o Figma | J01 (estrutura), E04 (trilha do clube), Sidebar aberta e recolhida: medidas, cores, fonte e ícones conferem. Diferenças: listadas abaixo |
+| `npm ci` (instalação limpa pelo lockfile) | ok, seguido de testes, lint, formatação e build de novo sem erros; levou cerca de 10 min nesta máquina (Windows) |
+| Não validado | Node 22 (executado com o Node 24.15.0 da máquina); menu com clubes reais na aplicação no ar (o banco de dev está vazio e não foi alterado; o caso está coberto pelos testes de componente) |
+
+Diferenças em relação ao Figma, todas intencionais:
+- Rodapé da sidebar só com "Horário de Brasília (UTC−3)": o resumo "Liga Fictícia 2026 / Última partida" depende dos endpoints da liga.
+- Sem contadores no menu e sem o "+" de novo clube (opcionais; o "+" entra com o cadastro de clubes, se fizer sentido).
+- Páginas com conteúdo provisório ("será implementada na Etapa 5.x"), a substituir nas próximas etapas; páginas de partidas e classificação aguardam os endpoints.
+- A raiz `/` redireciona para `/players`; a tela inicial (W01) é opcional.
+- Cards com raio de 12 px (como nos frames), apesar da tabela de raios do Figma dizer 14 px para cards.
 
 ### 4.2, compra, 4.3 e venda — o que foi validado (18/10/2026)
 
@@ -152,3 +175,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 17/10/2026 | Claude Code (Claude Opus) | `backend/src/clubs/`, `common/domain/text.ts`, `common/validation/`, `prisma/decimal.ts`, `test/` | `POST /clubs` (RN10), regras de nome e sigla, lock de criação, banco de teste e e2e com concorrência | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) | `backend/src/players/` (dto, controller, service, mapper, domain/player-listing), `common/domain/pagination.ts`, `common/validation/query-params.ts`, `test/players.e2e-spec.ts` | endpoints de jogadores (RN06–RN09, RN07), parser estrito de query params, testes com os exemplos oficiais e checagem por mutação | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) | `backend/src/market/`, `clubs/` (GET), `common/clock/`, `common/domain/datetime.ts`, `league/lineup-membership.ts`, `test/market.e2e-spec.ts` | compra, venda, consulta de clubes com contratos, relógio injetável e testes com os exemplos oficiais em instante fixo | em revisão pelo candidato |
+| 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/` (configuração, `styles/index.css`, `app/`, `shared/`, `features/*/` páginas provisórias e `clubs/api.ts`), `docs/frontend-design.md`, ADR-016 a 018 | leitura das variáveis e frames do Figma (tokens, medidas do layout, ícones), escolha de versões compatíveis com Node 22 via `npm view`, layout, cliente HTTP, testes com mock de `fetch` e conferência visual com Chrome headless | em revisão pelo candidato |

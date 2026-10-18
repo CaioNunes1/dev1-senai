@@ -8,7 +8,7 @@ Estudo de Caso SENAI/PE – CÓD. 237 Desenvolvedor I (Fullstack). Enunciado ofi
 
 | Ferramenta | Versão |
 | --- | --- |
-| Node.js (com npm) | 22 LTS |
+| Node.js (com npm) | 22 LTS (22.12 ou superior, exigido pelo Vite) |
 | Docker Engine com Docker Compose v2 | 24 ou superior |
 | PostgreSQL | 16 (imagem pública `postgres:16-alpine`, iniciada pelo Docker Compose) |
 
@@ -45,7 +45,14 @@ npm run start:prod
 
 - Origem da API: `http://localhost:3000` (as rotas ficam sob `/api/v1`).
 - Documentação interativa (Swagger): `http://localhost:3000/api/docs`.
-- Frontend: entra na Etapa 5.
+```bash
+# Frontend (em outro terminal, a partir da raiz do repositório)
+cd frontend
+npm ci
+npm run dev
+```
+
+- Interface: `http://localhost:5173` (a API precisa estar no ar; sem `frontend/.env`, o frontend usa a API em `http://localhost:3000`).
 
 ### Testes e qualidade (na pasta backend)
 
@@ -54,6 +61,15 @@ npm test              # testes unitários (terminam sozinhos)
 npm run test:e2e      # testes e2e da API (exigem o banco ligado; usam o banco separado passe_test)
 npm run lint          # ESLint
 npm run format:check  # Prettier, só verifica
+```
+
+### Testes e qualidade (na pasta frontend)
+
+```bash
+npm test              # testes de componente com Vitest (terminam sozinhos, sem modo de observação)
+npm run lint          # ESLint
+npm run format:check  # Prettier, só verifica
+npm run build         # checagem de tipos + build de produção em dist/
 ```
 
 ## 4. Variáveis de ambiente
@@ -67,6 +83,12 @@ Arquivo de exemplo: [backend/.env.example](backend/.env.example).
 | `CORS_ORIGIN` | origens do frontend liberadas no CORS, separadas por vírgula (nunca `*`) | `http://localhost:5173` |
 | `TEST_DATABASE_URL` | opcional, só nos testes e2e: banco de testes (padrão abaixo; o nome precisa terminar em `_test`) | `postgresql://passe:passe@localhost:5433/passe_test?schema=public` |
 
+Frontend, arquivo de exemplo [frontend/.env.example](frontend/.env.example) (opcional; para usar, `cp .env.example .env` na pasta frontend antes do `npm run dev`):
+
+| Variável | Uso | Exemplo |
+| --- | --- | --- |
+| `VITE_API_URL` | origem da API, sem `/api/v1` (o frontend acrescenta o prefixo); padrão `http://localhost:3000` | `http://localhost:3000` |
+
 ## 5. Estrutura de pastas e bibliotecas
 
 ```text
@@ -77,6 +99,14 @@ backend/              API NestJS
 │   ├── config/       leitura e validação das variáveis de ambiente
 │   └── prisma/       PrismaService
 └── test/             testes e2e
+frontend/             interface React (Vite)
+├── public/           favicon
+└── src/
+    ├── app/          rotas e layout (menu lateral, topo)
+    ├── features/     telas e chamadas à API por funcionalidade (jogadores, clubes, liga)
+    ├── shared/       cliente HTTP, hooks de dados e componentes reutilizáveis
+    ├── styles/       Tailwind CSS e tokens do design system
+    └── test/         configuração dos testes
 docs/                 planejamento, arquitetura e decisões
 ```
 
@@ -90,6 +120,17 @@ Bibliotecas do backend além da stack obrigatória:
 | `class-validator`, `class-transformer` | validação declarativa dos corpos de requisição (DTOs) |
 | `jest`, `ts-jest`, `supertest`, `@nestjs/testing` | testes unitários e e2e |
 | `eslint`, `typescript-eslint`, `eslint-config-prettier`, `prettier` | lint e formatação |
+
+Bibliotecas do frontend além da stack obrigatória (React + Vite):
+
+| Biblioteca | Motivo |
+| --- | --- |
+| `react-router` | rotas no modo biblioteca (`BrowserRouter`, `Routes`) |
+| `tailwindcss`, `@tailwindcss/vite` | estilos com os tokens do design system do mockup |
+| `lucide-react` | ícones; é o conjunto usado no mockup do Figma |
+| `@fontsource-variable/geist` | fonte Geist do mockup, servida pelo próprio build |
+| `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/dom`, `@testing-library/jest-dom`, `@testing-library/user-event` | testes de componente |
+| `eslint`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `eslint-config-prettier`, `globals`, `prettier` | lint e formatação |
 
 ## 6. Decisões e premissas
 
