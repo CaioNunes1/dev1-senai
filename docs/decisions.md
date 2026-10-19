@@ -75,7 +75,7 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
 - **Detalhada na compra (18/10/2026; revisada na Etapa 6.1, 19/10/2026):**
   - **Ordem dos locks.** `POST /players/{id}/buy` trava primeiro o jogador (`lockActivePlayer`) e depois o clube (`lockClub`); a venda segue a mesma ordem, então não há espera circular entre compra e venda.
   - **Leituras depois do lock.** O isolamento é o padrão do PostgreSQL (READ COMMITTED), e cada comando enxerga o que já foi confirmado. Por isso a checagem de jogador livre, a contagem do elenco, o caixa e a recompra são lidos só depois dos dois locks, e uma compra concorrente sempre vê o estado confirmado pela anterior.
-  - **Cenários cobertos por e2e.** Dois clubes comprando o mesmo jogador ao mesmo tempo, o mesmo clube comprando dois jogadores ao mesmo tempo (caixa e 12º jogador) e falha provocada no PostgreSQL na gravação do contrato ou da transação, que desfaz tudo.
+  - **Cenários cobertos por e2e.** Dois clubes comprando o mesmo jogador ao mesmo tempo, o mesmo clube comprando dois jogadores ao mesmo tempo (caixa e 12º jogador) e falha provocada no PostgreSQL na gravação do contrato ou da transação, que desfaz tudo. Na venda (19/10): duas vendas simultâneas do mesmo jogador (uma só credita), venda e compra cruzadas do mesmo jogador (estado sempre consistente) e falha provocada no contrato, na escalação ou na transação VENDA (tudo desfeito).
   - **Sem retry.** Não há erros de serialização para repetir.
   - **Proteção extra proposta, não aplicada.** Um índice único parcial `contratos(jogador_id) WHERE situacao = 'ATIVO'` impediria dois contratos ativos mesmo se um caminho futuro esquecer o lock. É uma migration estrutural (aditiva), então fica para o usuário autorizar.
 

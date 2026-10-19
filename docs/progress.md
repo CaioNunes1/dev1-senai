@@ -7,9 +7,9 @@
 - **Frontend:** layout do Figma, rotas, cliente HTTP, menu de clubes e **tela de jogadores completa**: lista (busca, filtros, ordenação, paginação, estados) e cadastro, edição, condição e exclusão. **Clubes completos**: lista com as 3 ordenações da API, cadastro (RN10) e página do clube com resumo e elenco com contratos. Partidas e classificação ainda provisórias.
 - **Mercado (Etapa 6, numeração do usuário em 19/10):**
   - 6.1 (compra no backend): já estava implementada desde 18/10; foi revisada contra o prompt em 19/10 e ganhou testes de concorrência, rollback e reflexo nas consultas.
-  - 6.2 (venda no backend): também já implementada em 18/10; falta a revisão.
+  - 6.2 (venda no backend): também já implementada em 18/10; revisada em 19/10 e ganhou testes de concorrência, rollback e reflexo nas consultas.
   - 6.3 (histórico e CSV), 6.4 e 6.5 (telas): pendentes.
-- **Próxima etapa:** 6.2 — revisão da venda (aguarda autorização do usuário).
+- **Próxima etapa:** 6.3 — histórico de transações, filtros, `summary` e CSV (RN17–RN18), ainda não implementados (aguarda autorização do usuário).
 - **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; 9 commits que alteram `frontend/`, todos de 18/10 e já no `origin` (5.1 a 5.3); a 5.4 ainda não foi commitada (3 commits de código sugeridos → 12). Faltam dias de push: só 18/10 até agora. Prazo: 23/10.
 - **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (último commit `292b86f`, docs da 5.2).
 
@@ -45,6 +45,21 @@
 | 5.2 | Listagem de jogadores (F1 Jogadores, parte) | ✅ 18/10 | ver "Etapa 5.2" | ADR-019; 1 bug achado na aplicação real |
 | 5.3 | Operações de jogadores (F1 Jogadores; F2 formulários; F3 mensagens) | ✅ 18/10 | ver "Etapa 5.3" | ADR-020; React Hook Form + Zod instalados |
 | 5.4 | Clubes: lista, cadastro e página do clube (F1 Clubes; F2 formulário; F3) | ✅ 18/10 | ver "Etapa 5.4" | ADR-021; sem bibliotecas novas |
+
+### Etapa 6.2 — venda no backend: revisão e testes (19/10/2026)
+
+O prompt detalhado da 6.2 não foi enviado (só "agora o prompt 6.2"). A venda (`POST /players/{id}/sell`) foi conferida contra o texto oficial (RN15, RN16, exemplo 2.3.2, saída da escalação da RN19), e nenhum código de produção mudou. Entraram só testes.
+
+| Verificação | Resultado |
+| --- | --- |
+| Regras conferidas | dias restantes arredondados para cima (0 se o fim já passou ou é o momento); faixas 0/5/10/20%; multa com teto de 10,00; lucro = valor na venda − valor do contrato (sem a taxa); comissão progressiva arredondada uma vez, só com lucro; crédito = valor − multa − comissão; RESCINDIDO com multa e ENCERRADO sem; jogador livre; saída da escalação mantendo a formação; transação VENDA (`fee` = comissão, `profit` com sinal); 409 para jogador livre; 404 para inexistente ou excluído |
+| Já cobertos antes | tabelas oficiais da RN15 (7 linhas + 3 da ficha-exemplo), comissão (6) e crédito (4 + teto) em testes unitários; exemplo 2.3.2 resposta por resposta; faixas e teto pela API; conciliação do caixa |
+| Testes novos (e2e) | duas vendas do mesmo jogador ao mesmo tempo → 200 + 409, caixa creditado uma vez (294,00), 1 VENDA; venda e compra do mesmo jogador por outro clube ao mesmo tempo → venda 200, compra 200 ou 409 conforme a ordem, no máximo 1 contrato ATIVO coerente com o clube do jogador e caixa de cada clube = 300,00 + soma das variações; falha provocada pelo PostgreSQL (trigger temporário só no `passe_test`) ao gravar o contrato RESCINDIDO, a saída da escalação ou a transação VENDA → 500 genérico, caixa 258,00, jogador no clube, contrato ATIVO, titular na escalação, nenhuma VENDA, e a venda seguinte funciona; depois da venda, `GET /players/{id}`, `?free=true`, `?club_id=`, `GET /clubs?sort=net_worth_desc` e `GET /clubs/{id}` com o novo estado |
+| Refatoração de teste | o trigger de falha virou o helper `withFailureOn(tabela, evento, ação)`, usado pela compra e pela venda |
+| Mutações | venda sem `$transaction` → 3 testes de rollback falharam; venda sem travar o jogador → o teste de duas vendas simultâneas falhou; código restaurado |
+| `npm test` | 23 suítes, 530 testes ok |
+| `npm run test:e2e` | 4 suítes, 238 testes ok (67 no mercado) |
+| Lint, formatação, build | ok; o trigger de teste não ficou no banco |
 
 ### Etapa 6.1 — compra no backend: revisão e testes (19/10/2026)
 
@@ -251,3 +266,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/shared/` (Dialog, ConfirmDialog, FormField, Alert, ToastProvider, useApiAction, text.ts), `features/players/` (schemas, diálogos, menu de ações), `app/AppProviders.tsx`, testes, ADR-020 | leitura dos frames J05–J16; formulários com React Hook Form + Zod; ações com trava contra envio duplo; testes com API falsa com estado e mutações; validação no navegador numa cópia isolada com o banco de teste | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/features/clubs/`, `shared/lib/format.ts` (datas em Brasília), `shared/lib/text.ts` (`removeAccents`), `shared/components/button-styles.ts`, `vite.config.ts` (`TZ=UTC` nos testes), testes, ADR-021 | leitura dos frames C01–C05, C09 e E04 e do contrato real de clubes no backend; lista, cadastro e página do clube; testes com API falsa com estado e mutações; validação no navegador numa cópia isolada com o banco de teste, inclusive o limite de 20 clubes | em revisão pelo candidato |
 | 19/10/2026 | Claude Code (Claude Opus) | `backend/test/market.e2e-spec.ts`, `backend/src/market/domain/purchase.spec.ts`, ADR-007 | revisão da compra contra o prompt da Etapa 6.1; testes de compras simultâneas, rollback com falha provocada por trigger no banco de teste e consultas depois da compra; mutações para provar os testes | em revisão pelo candidato |
+| 19/10/2026 | Claude Code (Claude Opus) | `backend/test/market.e2e-spec.ts`, ADR-007 | revisão da venda contra RN15, RN16 e o exemplo 2.3.2; testes de vendas simultâneas, venda × compra cruzadas, rollback com falha provocada por trigger no banco de teste e consultas depois da venda; mutações para provar os testes | em revisão pelo candidato |

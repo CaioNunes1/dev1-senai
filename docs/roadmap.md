@@ -154,11 +154,12 @@ As telas de clubes (frontend) continuam previstas aqui, em commits separados.
 | Subetapa | Escopo | Situação |
 | --- | --- | --- |
 | 6.1 | Compra no backend (RN12–RN14, RN01, RN17) | ✅ implementada em 18/10 (Etapa 9 abaixo), revisada em 19/10 com testes de concorrência, rollback e consultas |
-| 6.2 | Venda no backend (RN15–RN16) | implementada em 18/10 (Etapa 10); revisão pendente |
+| 6.2 | Venda no backend (RN15–RN16) | ✅ implementada em 18/10 (Etapa 10), revisada em 19/10 com testes de concorrência, rollback e consultas |
 | 6.3 | Histórico, filtros, `summary` e CSV (RN17–RN18) | pendente (Etapa 12) |
 | 6.4 e 6.5 | Telas de compra e venda | pendente (Etapa 11) |
 
 - **Commit sugerido (6.1):** `test(backend): cobre compras simultâneas, rollback e consultas depois da compra`.
+- **Commit sugerido (6.2):** `test(backend): cobre vendas simultâneas, rollback da venda e consultas depois da venda`.
 
 ## Etapa 9 — Compra
 
