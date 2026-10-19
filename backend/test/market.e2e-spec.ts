@@ -341,6 +341,135 @@ describe('Mercado e clubes (e2e)', () => {
       expect(await prisma.contract.count()).toBe(1);
       expect(await prisma.marketTransaction.count()).toBe(1);
     });
+
+    it('o mesmo clube comprando dois jogadores ao mesmo tempo: a 2ª compra vê o caixa já debitado', async () => {
+      // caixa 100,00; cada compra custa 50,00 (47,62 + 2,38): a 1ª cabe; depois sobra 50,00 e a 2ª passa de 25,00
+      await prisma.club.update({ where: { id: clubId }, data: { cash: '100.00' } });
+      const first = await playerWorth('47.62', 'Jogador Um');
+      const second = await playerWorth('47.62', 'Jogador Dois');
+
+      const responses = await Promise.all(
+        [first, second].map((id) =>
+          buy(id, { club_id: clubId, loyalty_until: '2027-03-02T10:15-03:00' }),
+        ),
+      );
+
+      expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+      const club = await prisma.club.findUniqueOrThrow({ where: { id: clubId } });
+      expect(club.cash.toFixed(2)).toBe('50.00');
+      expect(await prisma.player.count({ where: { clubId } })).toBe(1);
+      expect(await prisma.contract.count()).toBe(1);
+      expect(await prisma.marketTransaction.count()).toBe(1);
+    });
+
+    it('o mesmo clube com 11 jogadores comprando dois ao mesmo tempo: só o 12º entra', async () => {
+      for (let index = 0; index < 11; index += 1) {
+        const id = await createPlayer(
+          playerBody(`Jogador ${String.fromCharCode(65 + index)}`, 'MEI', 40),
+        );
+        await bought(id, clubId);
+      }
+      const candidates = await Promise.all([
+        createPlayer(playerBody('Jogador Extra', 'MEI', 40)),
+        createPlayer(playerBody('Jogador Outro', 'MEI', 40)),
+      ]);
+
+      const responses = await Promise.all(
+        candidates.map((id) =>
+          buy(id, { club_id: clubId, loyalty_until: '2027-03-02T10:15-03:00' }),
+        ),
+      );
+
+      expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+      expect(await prisma.player.count({ where: { clubId } })).toBe(12);
+      expect(await prisma.contract.count({ where: { status: 'ATIVO' } })).toBe(12);
+    });
+
+    it.each([
+      ['do contrato', 'contratos'],
+      ['da transação COMPRA', 'transacoes'],
+    ])(
+      'falha na gravação %s desfaz a compra inteira (caixa, vínculo, contrato e histórico)',
+      async (_description, table) => {
+        // Trigger só no banco de teste, removido no fim: provoca erro do PostgreSQL no meio da compra.
+        await prisma.$executeRawUnsafe(
+          `CREATE OR REPLACE FUNCTION falha_provocada_e2e() RETURNS trigger AS $$
+           BEGIN RAISE EXCEPTION 'falha provocada pelo teste'; END $$ LANGUAGE plpgsql`,
+        );
+        await prisma.$executeRawUnsafe(
+          `CREATE TRIGGER falha_provocada_e2e BEFORE INSERT ON "${table}"
+           FOR EACH ROW EXECUTE FUNCTION falha_provocada_e2e()`,
+        );
+        try {
+          const response = await buy(playerId, {
+            club_id: clubId,
+            loyalty_until: '2027-03-02T10:15-03:00',
+          });
+
+          expectError(response, 500);
+          expect(response.body.message).not.toContain('falha provocada');
+          await expectNothingRecorded(clubId);
+          const player = await prisma.player.findUniqueOrThrow({ where: { id: playerId } });
+          expect(player.clubId).toBeNull();
+        } finally {
+          await prisma.$executeRawUnsafe(
+            `DROP TRIGGER IF EXISTS falha_provocada_e2e ON "${table}"`,
+          );
+          await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS falha_provocada_e2e()');
+        }
+
+        expect((await bought(playerId, clubId)).body.club_cash).toBe(258);
+      },
+    );
+
+    it('depois da compra, as consultas de jogadores e clubes mostram o novo estado', async () => {
+      const otherClub = await createClub('Delta FC', 'DLT');
+      const before = await http().get('/api/v1/clubs?sort=net_worth_desc');
+      expect((before.body as { name: string }[]).map((club) => club.name)).toEqual([
+        'Águias FC',
+        'Delta FC',
+      ]);
+
+      await bought(playerId, otherClub);
+
+      const player = await http().get(`/api/v1/players/${playerId}`);
+      expect(player.body).toMatchObject({ id: playerId, club_id: otherClub, market_value: 40 });
+      const free = await http().get('/api/v1/players?free=true');
+      expect(free.body.meta.total_items).toBe(0);
+      const inClub = await http().get(`/api/v1/players?club_id=${otherClub}`);
+      expect((inClub.body.data as { id: number }[]).map((row) => row.id)).toEqual([playerId]);
+
+      const byNetWorth = await http().get('/api/v1/clubs?sort=net_worth_desc');
+      expect(byNetWorth.body).toEqual([
+        {
+          id: clubId,
+          name: 'Águias FC',
+          acronym: 'AGU',
+          cash: 300,
+          squad_value: 0,
+          net_worth: 300,
+        },
+        {
+          id: otherClub,
+          name: 'Delta FC',
+          acronym: 'DLT',
+          cash: 258,
+          squad_value: 40,
+          net_worth: 298,
+        },
+      ]);
+      const detail = await http().get(`/api/v1/clubs/${otherClub}`);
+      expect(detail.body).toMatchObject({ cash: 258, squad_value: 40, net_worth: 298 });
+      expect(detail.body.players[0]).toMatchObject({
+        id: playerId,
+        contract: {
+          purchase_value: 40,
+          loyalty_until: '2027-03-02T10:15:00-03:00',
+          remaining_days: 120,
+          penalty_rate: 10,
+        },
+      });
+    });
   });
 
   describe('POST /players/{id}/sell', () => {

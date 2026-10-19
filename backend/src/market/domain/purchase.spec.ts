@@ -36,6 +36,20 @@ describe('RN13 — taxa e limite de 50% do caixa (tabela oficial)', () => {
   });
 
   it.each([
+    // custo, caixa, aceita
+    [1, 2, true],
+    [1, 1, false],
+    [1, 0, false],
+    [0, 0, true],
+    [15000, 30000, true],
+    [15001, 30000, false],
+    [5, 11, true],
+    [6, 11, false],
+  ])('custo %i com caixa %i (centavos) → %p', (cost, cash, accepted) => {
+    expect(fitsCashLimit(cost, cash)).toBe(accepted);
+  });
+
+  it.each([
     [10532, 527, '105,32 × 5% = 5,266'],
     [9020, 451, '90,20 × 5% = 4,51'],
     [3001, 150, '30,01 × 5% = 1,5005'],
