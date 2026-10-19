@@ -11,7 +11,10 @@ const CLUBS = [
 
 const EMPTY_PAGE = { data: [], meta: { page: 1, limit: 10, total_items: 0, total_pages: 0 } };
 
-/** Clubes conforme `clubsResponses` (um por consulta; o último se repete); jogadores vazios. */
+/**
+ * Clubes conforme `clubsResponses` (um por consulta; o último se repete); página de um
+ * clube com elenco vazio; jogadores vazios.
+ */
 function mockClubsApi(...clubsResponses: Array<() => Response>) {
   let clubsCalls = 0;
   return mockApi((url) => {
@@ -19,6 +22,11 @@ function mockClubsApi(...clubsResponses: Array<() => Response>) {
       const respond = clubsResponses[Math.min(clubsCalls, clubsResponses.length - 1)];
       clubsCalls += 1;
       return respond();
+    }
+    const clubId = Number(/\/clubs\/(\d+)$/.exec(url.pathname)?.[1]);
+    const club = CLUBS.find(({ id }) => id === clubId);
+    if (club) {
+      return jsonResponse({ ...club, players: [] });
     }
     return jsonResponse(EMPTY_PAGE);
   });
