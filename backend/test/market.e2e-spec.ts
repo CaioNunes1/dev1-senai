@@ -95,6 +95,31 @@ describe('Mercado e clubes (e2e)', () => {
     expect(response.body.message).not.toBe('');
   }
 
+  /**
+   * Provoca um erro do PostgreSQL ao gravar em `table` durante `run` (trigger só no banco de
+   * teste, removido no fim), para conferir que a operação inteira é desfeita.
+   */
+  async function withFailureOn(
+    table: string,
+    event: 'INSERT' | 'UPDATE' | 'DELETE',
+    run: () => Promise<void>,
+  ): Promise<void> {
+    await prisma.$executeRawUnsafe(
+      `CREATE OR REPLACE FUNCTION falha_provocada_e2e() RETURNS trigger AS $$
+       BEGIN RAISE EXCEPTION 'falha provocada pelo teste'; END $$ LANGUAGE plpgsql`,
+    );
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER falha_provocada_e2e BEFORE ${event} ON "${table}"
+       FOR EACH ROW EXECUTE FUNCTION falha_provocada_e2e()`,
+    );
+    try {
+      await run();
+    } finally {
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS falha_provocada_e2e ON "${table}"`);
+      await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS falha_provocada_e2e()');
+    }
+  }
+
   /** Nada foi gravado: caixa inicial, sem contratos e sem transações. */
   async function expectNothingRecorded(clubId: number): Promise<void> {
     const club = await prisma.club.findUniqueOrThrow({ where: { id: clubId } });
@@ -391,16 +416,7 @@ describe('Mercado e clubes (e2e)', () => {
     ])(
       'falha na gravação %s desfaz a compra inteira (caixa, vínculo, contrato e histórico)',
       async (_description, table) => {
-        // Trigger só no banco de teste, removido no fim: provoca erro do PostgreSQL no meio da compra.
-        await prisma.$executeRawUnsafe(
-          `CREATE OR REPLACE FUNCTION falha_provocada_e2e() RETURNS trigger AS $$
-           BEGIN RAISE EXCEPTION 'falha provocada pelo teste'; END $$ LANGUAGE plpgsql`,
-        );
-        await prisma.$executeRawUnsafe(
-          `CREATE TRIGGER falha_provocada_e2e BEFORE INSERT ON "${table}"
-           FOR EACH ROW EXECUTE FUNCTION falha_provocada_e2e()`,
-        );
-        try {
+        await withFailureOn(table, 'INSERT', async () => {
           const response = await buy(playerId, {
             club_id: clubId,
             loyalty_until: '2027-03-02T10:15-03:00',
@@ -411,12 +427,7 @@ describe('Mercado e clubes (e2e)', () => {
           await expectNothingRecorded(clubId);
           const player = await prisma.player.findUniqueOrThrow({ where: { id: playerId } });
           expect(player.clubId).toBeNull();
-        } finally {
-          await prisma.$executeRawUnsafe(
-            `DROP TRIGGER IF EXISTS falha_provocada_e2e ON "${table}"`,
-          );
-          await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS falha_provocada_e2e()');
-        }
+        });
 
         expect((await bought(playerId, clubId)).body.club_cash).toBe(258);
       },
@@ -599,6 +610,119 @@ describe('Mercado e clubes (e2e)', () => {
 
     it.each(['999', 'abc', '01'])('jogador %s → 404', async (id) => {
       expectError(await sell(id), 404);
+    });
+
+    it('duas vendas do mesmo jogador ao mesmo tempo: só uma credita o caixa', async () => {
+      const playerId = await createPlayer(MEIA_LUA);
+      await bought(playerId, clubId);
+
+      const responses = await Promise.all([sell(playerId), sell(playerId)]);
+
+      expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+      const club = await prisma.club.findUniqueOrThrow({ where: { id: clubId } });
+      // 300,00 − 42,00 (compra de 40,00 + 2,00) + 36,00 (40,00 − multa de 4,00, sem lucro)
+      expect(club.cash.toFixed(2)).toBe('294.00');
+      expect(await prisma.marketTransaction.count({ where: { type: 'VENDA' } })).toBe(1);
+      expect((await prisma.contract.findFirstOrThrow()).status).toBe('RESCINDIDO');
+    });
+
+    it('venda e compra do mesmo jogador por outro clube ao mesmo tempo: estado sempre consistente', async () => {
+      const playerId = await createPlayer(MEIA_LUA);
+      await bought(playerId, clubId);
+      const otherClub = await createClub('Delta FC', 'DLT');
+
+      const [sale, purchase] = await Promise.all([
+        sell(playerId),
+        buy(playerId, { club_id: otherClub, loyalty_until: '2027-03-02T10:15-03:00' }),
+      ]);
+
+      // A venda trava o jogador primeiro ou espera a compra recusar; a compra só passa depois da venda.
+      expect(sale.status).toBe(200);
+      expect([200, 409]).toContain(purchase.status);
+      const player = await prisma.player.findUniqueOrThrow({ where: { id: playerId } });
+      const active = await prisma.contract.findMany({ where: { status: 'ATIVO' } });
+      expect(active.length).toBeLessThanOrEqual(1);
+      expect(player.clubId).toBe(active[0]?.clubId ?? null);
+      for (const id of [clubId, otherClub]) {
+        const club = await prisma.club.findUniqueOrThrow({ where: { id } });
+        const changes = await prisma.marketTransaction.findMany({ where: { clubId: id } });
+        const sum = changes.reduce((total, change) => total + Number(change.cashChange), 0);
+        expect((300 + sum).toFixed(2)).toBe(club.cash.toFixed(2));
+      }
+    });
+
+    it.each<[string, string, 'INSERT' | 'UPDATE' | 'DELETE']>([
+      ['do contrato (RESCINDIDO)', 'contratos', 'UPDATE'],
+      ['da saída da escalação', 'escalacoes', 'DELETE'],
+      ['da transação VENDA', 'transacoes', 'INSERT'],
+    ])(
+      'falha na gravação %s desfaz a venda inteira (caixa, vínculo, contrato, escalação e histórico)',
+      async (_description, table, event) => {
+        const playerId = await createPlayer(MEIA_LUA);
+        await bought(playerId, clubId);
+        await prisma.club.update({ where: { id: clubId }, data: { formation: '2-1-1' } });
+        await prisma.lineupSlot.create({ data: { clubId, playerId } });
+
+        await withFailureOn(table, event, async () => {
+          const response = await sell(playerId);
+
+          expectError(response, 500);
+          expect(response.body.message).not.toContain('falha provocada');
+          const club = await prisma.club.findUniqueOrThrow({ where: { id: clubId } });
+          expect(club.cash.toFixed(2)).toBe('258.00');
+          const player = await prisma.player.findUniqueOrThrow({ where: { id: playerId } });
+          expect(player.clubId).toBe(clubId);
+          expect((await prisma.contract.findFirstOrThrow()).status).toBe('ATIVO');
+          expect(await prisma.lineupSlot.count()).toBe(1);
+          expect(await prisma.marketTransaction.count({ where: { type: 'VENDA' } })).toBe(0);
+        });
+
+        expect((await sell(playerId)).body).toMatchObject({ cash_change: 36, club_cash: 294 });
+      },
+    );
+
+    it('depois da venda, as consultas de jogadores e clubes mostram o novo estado', async () => {
+      const playerId = await createPlayer(MEIA_LUA);
+      const otherClub = await createClub('Delta FC', 'DLT');
+      await bought(playerId, clubId);
+      const before = await http().get('/api/v1/clubs?sort=net_worth_desc');
+      expect((before.body as { name: string }[]).map((club) => club.name)).toEqual([
+        'Delta FC',
+        'Águias FC',
+      ]);
+
+      await sell(playerId);
+
+      expect((await http().get(`/api/v1/players/${playerId}`)).body.club_id).toBeNull();
+      const free = await http().get('/api/v1/players?free=true');
+      expect((free.body.data as { id: number }[]).map((row) => row.id)).toEqual([playerId]);
+      const inClub = await http().get(`/api/v1/players?club_id=${clubId}`);
+      expect(inClub.body.meta.total_items).toBe(0);
+      const byNetWorth = await http().get('/api/v1/clubs?sort=net_worth_desc');
+      expect(byNetWorth.body).toEqual([
+        {
+          id: otherClub,
+          name: 'Delta FC',
+          acronym: 'DLT',
+          cash: 300,
+          squad_value: 0,
+          net_worth: 300,
+        },
+        {
+          id: clubId,
+          name: 'Águias FC',
+          acronym: 'AGU',
+          cash: 294,
+          squad_value: 0,
+          net_worth: 294,
+        },
+      ]);
+      expect((await http().get(`/api/v1/clubs/${clubId}`)).body).toMatchObject({
+        cash: 294,
+        squad_value: 0,
+        net_worth: 294,
+        players: [],
+      });
     });
 
     it('jogador excluído → 404', async () => {
