@@ -1,6 +1,7 @@
 import { ArrowUpDown } from 'lucide-react';
 import { FilterSelect } from '../../shared/components/FilterSelect';
 import { cx } from '../../shared/lib/cx';
+import { lowerFirst } from '../../shared/lib/format';
 import { PLAYER_SORTS, type PlayerSort } from './api';
 import { FREE_WITH_CLUB_HINT, SORT_LABELS } from './player-labels';
 
@@ -73,8 +74,4 @@ export function PlayersTableToolbar({
       />
     </div>
   );
-}
-
-function lowerFirst(text: string): string {
-  return text.charAt(0).toLocaleLowerCase('pt-BR') + text.slice(1);
 }

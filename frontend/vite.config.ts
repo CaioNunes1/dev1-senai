@@ -12,5 +12,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Fuso diferente do de Brasília: prova que as datas não dependem do fuso do computador.
+    env: { TZ: 'UTC' },
   },
 });

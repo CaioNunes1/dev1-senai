@@ -22,3 +22,10 @@ export function countCharacters(text: string): number {
 export function countWords(text: string): number {
   return text.split(SPACE).filter((token) => LETTER.test(token)).length;
 }
+
+const ACCENT_MARKS = /\p{Mn}/gu;
+
+/** Decompõe em NFD e retira as marcas de acento (Mn), inclusive a cedilha, como o backend. */
+export function removeAccents(text: string): string {
+  return text.normalize('NFD').replace(ACCENT_MARKS, '');
+}
