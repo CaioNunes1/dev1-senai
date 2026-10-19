@@ -109,7 +109,7 @@ Erros: qualquer exceção → AllExceptionsFilter → { message } + status (400/
 
 Detalhes de telas e tokens em [frontend-design.md](frontend-design.md).
 
-Estrutura após a Etapa 5.3 (✅ = existe; o resto entra com a tela que o usa):
+Estrutura após a Etapa 5.4 (✅ = existe; o resto entra com a tela que o usa):
 
 ```text
 frontend/
@@ -124,15 +124,17 @@ frontend/
     ├── shared/
     │   ├── api/http-client.ts   ✅ apiRequest, ApiError, URL base de VITE_API_URL + /api/v1
     │   ├── hooks/               ✅ useApiQuery, useApiAction, DataRefreshProvider/useDataRefresh, ToastProvider/useToast, useDebouncedValue
-    │   ├── components/          ✅ Button, Card, PageHeader, DataTable, EmptyState, Badge, Input, FilterSelect, FormField, Alert,
-    │   │                           Dialog, ConfirmDialog
-    │   └── lib/                 ✅ cx, formatMoney, text (regras V4 iguais às do backend) · formatador de data (histórico)
+    │   ├── components/          ✅ Button (+ button-styles), Card, PageHeader, DataTable, EmptyState, Badge, Input, FilterSelect,
+    │   │                           FormField, Alert, Dialog, ConfirmDialog
+    │   └── lib/                 ✅ cx, format (moeda, inteiro, %, data/hora em Brasília), text (regras V4 e removeAccents do backend)
     ├── features/
     │   ├── players/             ✅ api.ts, usePlayerList, player-filters (funções puras), PlayersPage, PlayersFilters, RangeFilter,
     │   │                           PlayersTableToolbar, PlayersTable, PlayersPagination, ConditionBadge, PlayerAvatar,
     │   │                           player-schemas (Zod), PlayerDialogs, Create/Created/Edit/Condition/DeletePlayerDialog,
     │   │                           PlayerActionsMenu, PositionPicker, PlayerSummary
-    │   ├── clubs/               ✅ api.ts (GET /clubs), useClubs, ClubsContext/useClubList, ClubsPage e ClubDetailPage (provisórias, 5.4)
+    │   ├── clubs/               ✅ api.ts (GET /clubs, GET /clubs/{id}, POST /clubs), useClubs/useClub, ClubsContext/useClubList,
+    │   │                           club-schemas (Zod), club-labels, ClubsPage, ClubsTable, CreateClubDialog, ClubMonogram,
+    │   │                           ClubDetailPage, ClubSummaryCards, SquadTable
     │   ├── market/              compra, venda, histórico e CSV
     │   └── league/              ✅ MatchesPage e StandingsPage (provisórias) · escalação, partidas
     ├── styles/index.css         ✅ Tailwind v4 + tokens do Figma (@theme)

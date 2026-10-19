@@ -129,6 +129,27 @@ Frames consultados: J05 `52:127206` (novo), J06 `52:128117` (erros), J07 `52:129
 
 Diferenças visuais [D]: asterisco nos campos obrigatórios (o Figma não mostra; o prompt da etapa pede a indicação); rodapé e aviso de erro fixos no diálogo, com rolagem só no conteúdo (o Figma desenha o diálogo inteiro sem rolagem, em 1440 × 1022).
 
+### 3.3 Clubes (Etapa 5.4) — como foram implementados
+
+Frames consultados: C01 `54:138539` (lista + menu de ordenação), C02 `54:138880` (novo), C03 `54:139250` (recusado), C04 `54:139627` (criado, elenco vazio), C05 `54:139956` (elenco com contratos), C09 `54:140889` (lista vazia), E04 `54:149172` (clube inexistente).
+
+| Elemento | Figma | Implementação | Origem |
+| --- | --- | --- | --- |
+| Colunas da lista | Clube (sigla + nome), Sigla, Caixa, Valor do elenco, Patrimônio, "Ver clube ›" | as mesmas, valores da API com `formatMoney`; "Ver clube" é link (nome acessível "Ver clube {nome}") | [O] RN11 |
+| Contador | "6 clubes · 6 de 20" | tamanho da lista devolvida; 20 é o limite da RN10 (só informativo) | [M] |
+| Ordenação | "Ordenar: nome", 3 opções | `?sort=` na URL da tela (`name` some da URL); por nome, a tela usa a consulta do menu (`ClubsContext`, sem 2º `GET /clubs`); por patrimônio, `GET /clubs?sort=net_worth_desc|asc`; nenhuma ordenação na tela (ADR-021) | [O] |
+| Sem paginação | — | lista inteira (máx. 20); `DataTable` sem paginação | [O] |
+| Estados | C09 vazia, E01/E03 | `DataTable`: esqueleto, vazio com "Novo clube", erro com `message` + "Tentar de novo" | [O] F3 |
+| Novo clube | C02: nome, sigla, aviso "começa com 300,00" | `POST /clubs` só com `name` (espaços normalizados, acentos mantidos) e `acronym`; Zod com as regras do backend (ADR-021); com 20 clubes, aviso no diálogo, mas o envio continua (a API decide) | [O] RN10 |
+| Recusa | C03: alerta no topo, campo nome em vermelho | `message` da API em `notice` (acima do rodapé, ADR-020); dados mantidos; 409 recarrega a lista | [O]; posição do alerta e campo sem destaque [D] |
+| Depois de criar | C04: abre a página do clube + toast | fica na lista (ordenação mantida), linha nova destacada na posição devolvida pela API, menu atualizado, toast com caixa, valor do elenco e patrimônio **do 201** | [D] (prompt da etapa) |
+| Cabeçalho do clube | sigla num quadro, "Sigla AGU", "6 de 12 jogadores", "Comprar jogadores" | igual, sem o botão de compra (etapa de compra); volta pela trilha "Clubes" | [O]; compra pendente |
+| Resumo | 4 cards: Caixa, Valor do elenco, Patrimônio, Elenco | os 4, valores da API (nada somado na tela); 1 coluna < 640 px, 2 até 1280 px, 4 acima | [O] |
+| Abas | Elenco · Escalação · Histórico | **só o Elenco** (título + contagem); as abas entram com escalação e histórico | pendente |
+| Elenco | Jogador, Posição, Overall, Condição, Valor de mercado, Valor de compra, Fim da fidelidade (data + hora), Dias restantes, % de multa, "Vender" | as 9 colunas na ordem da API (RN11); data em Brasília (`Intl`, `America/Sao_Paulo`); `remaining_days` e `penalty_rate` como vieram; multa 0% verde com ✓, 20% vermelha, demais amarela; sem contrato ativo → "—"; nome quebra linha para caber em 1366 px; sem "Vender" (etapa de venda) | [O] RN11/RN15 |
+| Elenco vazio | C04: "Nenhum jogador no elenco" + "Ver jogadores livres" | mensagem "Este clube ainda não possui jogadores."; sem o botão (a lista de jogadores não abre filtrada por URL) | [D] |
+| Clube inexistente | E04 | `GET /clubs/{id}` → 404: `message` da API + "Voltar para clubes"; id fora do formato também vai à API (V8 responde 404) | [O] |
+
 ## 4. Componentes
 
 Implementados:
@@ -147,24 +168,26 @@ Implementados:
 | `FormField`, `Alert` | `shared/components/` | rótulo + campo + dica + erro ligados por `aria-describedby`; aviso info/warning/destructive (Figma `6:978`) | 5.3 |
 | `ToastProvider` / `useToast`, `useApiAction` | `shared/hooks/` | avisos de sucesso/erro; ação de escrita com trava síncrona contra envio duplo | 5.3 |
 | `PlayerDialogs`, `CreatePlayerDialog`, `CreatedPlayerDialog`, `EditPlayerDialog`, `ConditionDialog`, `DeletePlayerDialog`, `PlayerActionsMenu`, `PositionPicker`, `PlayerSummary` | `features/players/` | operações de jogador | 5.3 |
+| `buttonClasses` | `shared/components/button-styles.ts` | classes do `Button` também para links com cara de botão ("Ver clube", "Voltar para clubes") | 5.4 |
+| `ClubsTable`, `CreateClubDialog`, `ClubMonogram`, `ClubSummaryCards`, `SquadTable` | `features/clubs/` | lista, cadastro, sigla em quadro, resumo e elenco do clube; o elenco reaproveita `ConditionBadge`, `PlayerAvatar` e `DataTable` | 5.4 |
 
 Previstos, criados quando a primeira tela precisar (evita componente sem uso):
 
 | Componente | Responsabilidade | Primeira tela |
 | --- | --- | --- |
-| `Tabs` | abas do clube | 5.4 |
+| `Tabs` | abas do clube (Elenco, Escalação, Histórico); na 5.4 só existe o Elenco | escalação (liga) |
 
 ## 5. Formatação e datas
 
 - Moeda: `Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })` → `1.744,14`; unidade "moedas" ao lado do valor em destaque (Figma, Formatação de dados).
 - Variação de caixa: sinal sempre visível (`+35,70` / `−45,55`); entrada e lucro em `success`, saída e prejuízo em `destructive`.
-- Percentual de multa: `0%`, `5%`, `10%`, `20%`. Dias restantes com separador de milhar (`1.089 dias`). Valor ausente: `–` em `muted-foreground`.
-- Datas exibidas: `07/11/2026 10:30`, sempre horário de Brasília (`timeZone: 'America/Sao_Paulo'`).
+- Percentual de multa: `0%`, `5%`, `10%`, `20%` (`formatPercent`). Dias restantes com separador de milhar (`formatInteger`: `1.089`; a unidade está no cabeçalho "Dias restantes"). Valor ausente: `—` em `muted-foreground`, com texto para leitor de tela.
+- Datas exibidas: `07/11/2026` e, abaixo, `10:30` (`formatBrasiliaDateTime`), sempre horário de Brasília (`timeZone: 'America/Sao_Paulo'`). Os testes rodam com `TZ=UTC` (`vite.config.ts`) para provar que a data não depende do fuso do computador.
 - Data digitada: `<input type="datetime-local">` devolve `AAAA-MM-DDTHH:MM`; envia-se `${valor}-03:00` (independe do fuso do navegador).
 
 ## 6. Formulários (F2 › Formulários — os 7)
 
-Cadastro de jogador, edição, alteração de condição, criação de clube, compra, escalação, nova partida. Validação no cliente (Zod) **apenas** de obrigatórios, tamanhos (nome jogador 3–100, clube 3–60, sigla 3) e faixas de um campo (agilidade 1–100, idade 16–45, atributos/potencial 1–99). Regras cruzadas e de estado ficam na API; a tela mostra o `message`. Bloqueios preventivos permitidos: "só livres" + clube, DOENTE → APTO, posição de jogador com clube, idade menor que a atual.
+Cadastro de jogador, edição, alteração de condição, criação de clube, compra, escalação, nova partida. Validação no cliente (Zod) **apenas** de obrigatórios, tamanhos (nome jogador 3–100, clube 3–60, sigla 3) e faixas de um campo (agilidade 1–100, idade 16–45, atributos/potencial 1–99). Regras cruzadas e de estado ficam na API; a tela mostra o `message`. Bloqueios preventivos permitidos: "só livres" + clube, DOENTE → APTO, posição de jogador com clube, idade menor que a atual. Exceção registrada na ADR-021: a sigla do clube é conferida com o nome no cliente (regra de formato do campo `acronym`, só texto); unicidade e limite de 20 clubes ficam na API.
 
 Regras de escrita do Figma (Escrita e acessibilidade): botões começam com verbo; um botão preenchido (`primary`) por tela; erros dizem como corrigir; status nunca só por cor (badge com texto); rótulo visível em todo campo; foco visível; contraste ≥ 4,5:1.
 
@@ -173,3 +196,5 @@ Regras de escrita do Figma (Escrita e acessibilidade): botões começam com verb
 Decisão do usuário (18/10/2026): o foco é o desktop e as telas da página "Telas · Mobile" não serão reproduzidas. O layout base já não tem rolagem horizontal em 375 px (menu vira painel sobreposto, padding lateral de 16 px); cada tabela rola dentro do próprio quadro (`DataTable`, largura mínima `min-w-4xl`), o que mantém o critério do F5 ao alcance sem telas próprias.
 
 Jogadores em 375 px (medido na Etapa 5.2): página com `scrollWidth` = 375; filtros empilhados (busca em linha inteira); tabela rola dentro do card (926 px de conteúdo em 325 px); popover de faixa ocupa a largura útil; paginação cabe sem cortar.
+
+Clubes em 375 px (medido na Etapa 5.4): lista e página do clube com `scrollWidth` = 375; tabela de clubes rola no card (896 px em 325 px), elenco também (978 px em 325 px); cards do resumo em 1 coluna; diálogo de cadastro com 343 px e 16 px de margem, erro da API visível; menu sobreposto com os clubes. Em 1366 × 768 o elenco cabe sem rolagem interna (1021 px).

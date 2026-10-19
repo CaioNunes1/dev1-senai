@@ -97,6 +97,13 @@ Notas da Etapa 5.3 (ações de escrita):
 - Testes: `renderApp` (`src/test/render-app.tsx`) e `mockApi`/`writesTo` (`src/test/fetch-mock.ts`) para conferir método e corpo enviados.
 - Se as portas 3000/5173 estiverem ocupadas por processos do usuário, não encerrá-los: validar numa cópia isolada (backend `PORT=3001` + `CORS_ORIGIN=http://localhost:5174` com o `passe_test`; `VITE_API_URL=http://localhost:3001 npx vite --port 5174`).
 
+Notas da Etapa 5.4 (clubes):
+- Ordenação de clubes na URL (`?sort=`); por nome, a tela usa a lista do menu (`useClubList`), sem 2º `GET /clubs`; por patrimônio, `useClubs(sort)` (ADR-021).
+- Datas da API só por `formatBrasiliaDateTime` (`shared/lib/format.ts`); os testes rodam com `TZ=UTC` (não tirar de `vite.config.ts`).
+- Link com cara de botão: `buttonClasses` (`shared/components/button-styles.ts`), nunca `<button>` dentro de `<a>`.
+- Tabela larga em 1366 px: medir `scrollWidth` × `clientWidth` do quadro da tabela; preferir largura automática e quebra do nome a esconder coluna.
+- Limpar o `passe_test` com TRUNCATE foi negado pela permissão; para ver o estado vazio real, pedir ao usuário ou rodar o e2e.
+
 Notas da Etapa 1:
 - Versões fixadas: Nest 11, TypeScript 5.9, Prisma 6, ESLint 9 (motivos na ADR-001). Não atualizar majors sem nova ADR.
 - Nunca usar `ValidationPipe`/`ParseIntPipe` padrão: usar `StrictValidationPipe` (global) e `ParseIdPipe` (ADR-012).

@@ -18,7 +18,7 @@ Prazo: **sexta-feira, 23/10/2026, 20h (Brasília)**. Hoje: 15/10. Errata previst
 | 2 | Modelo de dados e migrations | backend | B3 | 16/10 |
 | 3 | Domínio de jogadores (cálculos puros) | backend | B05, B06, B5 (testes) | 16/10 |
 | 4 | API de jogadores (CRUD + condição + exclusão) | backend | B01–B04, B06, B08 | 17/10 |
-| 5 | Frontend: fundação (5.1 ✅ 18/10), jogadores (5.2–5.3), clubes (5.4) | frontend | F2, F3, F5 (lint) | 18–20/10 |
+| 5 | Frontend: fundação (5.1 ✅ 18/10), jogadores (5.2–5.3 ✅), clubes (5.4 ✅) | frontend | F2, F3, F5 (lint) | 18–20/10 |
 | 6 | Listagem de jogadores (API) | backend | B07 | 17–18/10 |
 | 7 | Tela de jogadores | frontend | F01–F04 | 18/10 |
 | 8 | Clubes (API + telas) | ambos | B09, F05 | 18–19/10 |
@@ -102,7 +102,7 @@ Prioridades do usuário: arquitetura simples, fidelidade aos fluxos do enunciado
 | 5.1 | Fundação: Vite/React/TS, Tailwind + tokens do Figma, layout (sidebar, topo), rotas iniciais, cliente HTTP, lint/format/testes, documentação | ✅ 18/10/2026 |
 | 5.2 | Tela de jogadores: lista integrada, tabela do Figma (J01), paginação, filtros, ordenação, estados, rolagem interna da tabela | ✅ 18/10/2026 |
 | 5.3 | Operações de jogadores: cadastro, edição, condição, exclusão com confirmação, mensagens; `useApiAction` com guarda de duplo clique | ✅ 18/10/2026 |
-| 5.4 | Clubes: lista e ordenação, cadastro, página do clube com resumo financeiro e elenco | próxima |
+| 5.4 | Clubes: lista e ordenação, cadastro, página do clube com resumo financeiro e elenco | ✅ 18/10/2026 |
 
 As telas de compra, venda, histórico e liga são planejadas depois, com os endpoints restantes do backend.
 
@@ -121,6 +121,11 @@ As telas de compra, venda, histórico e liga são planejadas depois, com os endp
 
 - **Critérios de aceite:** cadastro com os 11 campos (números JSON), validação junto ao campo antes de enviar, overall e valor base exibidos da resposta do 201; edição com `GET` antes e `PUT` com 4 campos, RN08 na tela; condição por `PATCH` com Doente → Apto bloqueado; exclusão só de livres, com confirmação e `DELETE` 204; clique duplo = 1 pedido; `message` da API nas recusas; lista atualizada sem recarregar.
 - **Commits sugeridos:** `feat(frontend): adiciona diálogo, formulário, avisos e ação com trava contra envio duplo` · `feat(frontend): cadastra jogadores com validação e resultado calculado pela api` · `feat(frontend): edita, altera condição e exclui jogadores pelo menu da tabela` · `docs: registra as operações de jogadores e a ADR-020`.
+
+### Etapa 5.4 — Clubes ✅ (18/10/2026)
+
+- **Critérios de aceite:** `GET /clubs` com as 5 colunas e as 3 ordenações pela API (sem ordenar na tela, sem paginação); cadastro por `POST /clubs` só com `name` e `acronym`, validação RN10 antes de enviar, 400/409 com o `message` e dados mantidos, clique duplo = 1 pedido; lista e menu atualizados sem recarregar e sem consultas repetidas; `/clubs/:id` por clique ou URL direta, resumo e elenco como a API devolve, contrato com data em Brasília, elenco vazio, 404 e falha de rede; sem rolagem horizontal em 1366 e 375 px.
+- **Commits sugeridos:** `feat(frontend): lista clubes com ordenação pela api` · `feat(frontend): cadastra clubes com validação de nome e sigla` · `feat(frontend): mostra a página do clube com resumo financeiro e elenco com contratos` · `docs: registra as telas de clubes e a ADR-021`.
 
 ## Etapa 6 — Listagem de jogadores (API)
 

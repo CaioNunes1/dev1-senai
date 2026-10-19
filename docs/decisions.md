@@ -199,3 +199,22 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
   5. 404 ou 409 numa ação aberta recarregam a lista (os dados mudaram depois que a tela abriu).
 - **Alternativas:** `<dialog>` nativo com `showModal()` (o jsdom dos testes não implementa; os testes não poderiam verificar foco e Esc); biblioteca de componentes (Radix/shadcn, rejeitada na ADR-017); `refreshAll` automático dentro do `useApiAction` (acoplaria o hook à lista, contra o pedido do usuário); repetir no Zod as regras cruzadas (duas fontes da mesma regra).
 - **Consequências:** o menu de ações da linha também abre num portal com posição fixa, para não ser cortado pela rolagem da tabela, e fecha ao rolar a página.
+
+## ADR-021 — Tela de clubes: ordenação na URL, consulta do menu reaproveitada e sigla conferida no cliente
+
+- **Status:** Aceita (18/10/2026, Etapa 5.4)
+- **Contexto:** a lista de clubes tem 3 ordenações feitas pela API (RN11) e precisa atualizar a lista e o menu lateral depois de um cadastro sem pedidos repetidos. O cadastro tem regras de formato do nome e da sigla (RN10, "Limites de cada campo"), e a página do clube mostra datas que precisam sair no horário de Brasília em qualquer computador.
+- **Decisão:**
+  1. **Ordenação na URL** (`/clubs?sort=net_worth_desc`; `name` não aparece). Voltar da página do clube pelo navegador mantém a ordem, e o link pode ser compartilhado. Valor desconhecido volta para `name`. A tela de jogadores continua com estado local (ADR-019): lá são 10 filtros e a busca.
+  2. **Por nome, a tela usa a consulta do menu** (`ClubsContext`, `GET /clubs` sem `sort`). Por patrimônio, um componente filho faz a própria consulta com `sort`. Assim, depois de um cadastro, o `refreshAll` gera 1 `GET /clubs` (por nome) ou 2 (patrimônio + menu), nunca consultas iguais.
+  3. **Depois do 201**, a tela fica na lista: a linha nova fica destacada na posição que a API devolveu, o menu é atualizado e o aviso mostra caixa, valor do elenco e patrimônio **da resposta**. O Figma C04 abre a página do clube; o prompt da etapa pede que a lista seja atualizada e mantenha a ordenação.
+  4. **A sigla é conferida com o nome no cliente**: 3 letras A–Z, não todas iguais, primeira letra do nome, letras em ordem, sem diferenciar acentos e maiúsculas. Uma função com a mesma lógica do backend usa `removeAccents` de `shared/lib/text.ts`. É regra de formato do campo `acronym` (só texto, sem consultar estado), por isso é exceção ao item 4 da ADR-020. Unicidade de nome e sigla e o limite de 20 clubes ficam só na API (409); a tela não consulta a lista para adivinhar.
+  5. **Datas** com `Intl.DateTimeFormat` e `timeZone: 'America/Sao_Paulo'`. Os testes do frontend rodam com `TZ=UTC` (`vite.config.ts`). Sem isso, um formatador sem fuso passaria nos testes numa máquina em Brasília (achado por mutação).
+  6. **Link com cara de botão**: as classes do `Button` foram para `button-styles.ts` (`buttonClasses`), usadas pelo `Button` e pelos links "Ver clube" e "Voltar para clubes". Um `<button>` dentro de um `<a>` seria HTML inválido.
+- **Alternativas:**
+  - Ordenação em estado local: perde a ordem ao voltar da página do clube.
+  - Sempre uma consulta própria na tela: um `GET /clubs` igual ao do menu a cada carga e a cada `refreshAll`.
+  - Navegar para a página do clube depois de criar, como no C04: contraria o pedido de manter a lista e a ordenação.
+  - Deixar a correspondência sigla × nome só na API: o erro mais comum do formulário só apareceria depois do envio.
+  - Fixar o fuso no `setup` dos testes: o `TZ` precisa estar definido antes do primeiro `Intl`.
+- **Consequências:** o aviso de 20 clubes no diálogo usa a lista do menu e é só orientação; o envio continua e a recusa vem da API. As abas Escalação e Histórico e os botões "Comprar jogadores" e "Vender" do Figma ficam para as etapas que têm esses endpoints na tela.
