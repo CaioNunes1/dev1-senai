@@ -149,6 +149,17 @@ Compra (Etapa 9) e venda (Etapa 10) também concluídas no backend em 18/10/2026
 
 As telas de clubes (frontend) continuam previstas aqui, em commits separados.
 
+## Etapa 6 do usuário — Mercado (definida em 19/10/2026)
+
+| Subetapa | Escopo | Situação |
+| --- | --- | --- |
+| 6.1 | Compra no backend (RN12–RN14, RN01, RN17) | ✅ implementada em 18/10 (Etapa 9 abaixo), revisada em 19/10 com testes de concorrência, rollback e consultas |
+| 6.2 | Venda no backend (RN15–RN16) | implementada em 18/10 (Etapa 10); revisão pendente |
+| 6.3 | Histórico, filtros, `summary` e CSV (RN17–RN18) | pendente (Etapa 12) |
+| 6.4 e 6.5 | Telas de compra e venda | pendente (Etapa 11) |
+
+- **Commit sugerido (6.1):** `test(backend): cobre compras simultâneas, rollback e consultas depois da compra`.
+
 ## Etapa 9 — Compra
 
 RN12–RN14, RN01 no `loyalty_until`, transação + lock, contrato e transação COMPRA, `GET /clubs/{id}` com `contract` (dias restantes/% multa via função única de RN15). Aceite: tabela RN13 (5 linhas), exemplo 2.3.1, ficha-exemplo B10/B13.

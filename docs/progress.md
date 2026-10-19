@@ -5,7 +5,11 @@
 - **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda; **5.1 — Fundação do frontend**; **5.2 — Listagem de jogadores**; **5.3 — Operações de jogadores**; **5.4 — Clubes** (18/10/2026).
 - **Backend:** 11 das 19 rotas do enunciado prontas. Faltam histórico e CSV (RN17–RN18), escalação (RN19), partidas e classificação (RN20–RN21).
 - **Frontend:** layout do Figma, rotas, cliente HTTP, menu de clubes e **tela de jogadores completa**: lista (busca, filtros, ordenação, paginação, estados) e cadastro, edição, condição e exclusão. **Clubes completos**: lista com as 3 ordenações da API, cadastro (RN10) e página do clube com resumo e elenco com contratos. Partidas e classificação ainda provisórias.
-- **Próxima etapa:** a definir pelo usuário (telas de compra e venda ou backend restante: histórico, escalação, partidas). Aguarda autorização.
+- **Mercado (Etapa 6, numeração do usuário em 19/10):**
+  - 6.1 (compra no backend): já estava implementada desde 18/10; foi revisada contra o prompt em 19/10 e ganhou testes de concorrência, rollback e reflexo nas consultas.
+  - 6.2 (venda no backend): também já implementada em 18/10; falta a revisão.
+  - 6.3 (histórico e CSV), 6.4 e 6.5 (telas): pendentes.
+- **Próxima etapa:** 6.2 — revisão da venda (aguarda autorização do usuário).
 - **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; 9 commits que alteram `frontend/`, todos de 18/10 e já no `origin` (5.1 a 5.3); a 5.4 ainda não foi commitada (3 commits de código sugeridos → 12). Faltam dias de push: só 18/10 até agora. Prazo: 23/10.
 - **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (último commit `292b86f`, docs da 5.2).
 
@@ -41,6 +45,21 @@
 | 5.2 | Listagem de jogadores (F1 Jogadores, parte) | ✅ 18/10 | ver "Etapa 5.2" | ADR-019; 1 bug achado na aplicação real |
 | 5.3 | Operações de jogadores (F1 Jogadores; F2 formulários; F3 mensagens) | ✅ 18/10 | ver "Etapa 5.3" | ADR-020; React Hook Form + Zod instalados |
 | 5.4 | Clubes: lista, cadastro e página do clube (F1 Clubes; F2 formulário; F3) | ✅ 18/10 | ver "Etapa 5.4" | ADR-021; sem bibliotecas novas |
+
+### Etapa 6.1 — compra no backend: revisão e testes (19/10/2026)
+
+A compra (`POST /players/{id}/buy`, módulo `market`) já existia desde 18/10. Na 6.1 ela foi conferida item a item contra o prompt da etapa (RN01, RN12–RN14, RN17, V1–V9), e nenhum código de produção mudou. Entraram só testes.
+
+| Verificação | Resultado |
+| --- | --- |
+| Testes novos (e2e) | o mesmo clube comprando 2 jogadores ao mesmo tempo com caixa 100,00 e custo 50,00 cada → 200 + 409, caixa 50,00, 1 contrato, 1 transação; clube com 11 jogadores e 2 compras simultâneas → só o 12º entra; falha provocada pelo PostgreSQL (trigger temporário só no `passe_test`, removido no `finally`) na gravação do **contrato** e da **transação** → 500 com mensagem genérica, caixa 300,00, jogador livre, nenhum contrato ou transação; depois da compra, `GET /players/{id}`, `?free=true`, `?club_id=`, `GET /clubs?sort=net_worth_desc` e `GET /clubs/{id}` com caixa 258,00, elenco 40,00, patrimônio 298,00, 120 dias e 10% |
+| Teste novo (unitário) | limite de 50% nos valores mínimos e com caixa ímpar em centavos (custo 1 × caixa 1/2/0; 5 e 6 × 11; 150,00 e 150,01 × 300,00) |
+| Mutações | compra sem `$transaction` → 4 testes falharam (rollback e concorrência); clube sem `FOR UPDATE` → os 2 de concorrência no mesmo clube falharam; código restaurado |
+| `npm test` | 23 suítes, 530 testes ok |
+| `npm run test:e2e` | 4 suítes, 232 testes ok (61 no mercado) |
+| Lint, formatação, build | ok |
+| Banco | só `passe_test`; o trigger e a função de teste não ficaram no banco (conferido em `pg_trigger`/`pg_proc`) |
+| Não feito | índice único parcial de contrato ATIVO por jogador: proposto na ADR-007, depende de autorização (migration estrutural) |
 
 ### Etapa 5.4 — o que foi validado (18/10/2026)
 
@@ -231,3 +250,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/features/players/`, `shared/components/` (DataTable, EmptyState, Badge, Input, FilterSelect), `shared/hooks/use-debounced-value.ts`, `features/clubs/clubs-context.ts`, testes, ADR-019 | leitura dos frames J01, J02, J04, J15 e E01–E07; tela de jogadores integrada à API; testes com API simulada e mutações; validação no navegador com dados controlados no banco de teste | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/shared/` (Dialog, ConfirmDialog, FormField, Alert, ToastProvider, useApiAction, text.ts), `features/players/` (schemas, diálogos, menu de ações), `app/AppProviders.tsx`, testes, ADR-020 | leitura dos frames J05–J16; formulários com React Hook Form + Zod; ações com trava contra envio duplo; testes com API falsa com estado e mutações; validação no navegador numa cópia isolada com o banco de teste | em revisão pelo candidato |
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/features/clubs/`, `shared/lib/format.ts` (datas em Brasília), `shared/lib/text.ts` (`removeAccents`), `shared/components/button-styles.ts`, `vite.config.ts` (`TZ=UTC` nos testes), testes, ADR-021 | leitura dos frames C01–C05, C09 e E04 e do contrato real de clubes no backend; lista, cadastro e página do clube; testes com API falsa com estado e mutações; validação no navegador numa cópia isolada com o banco de teste, inclusive o limite de 20 clubes | em revisão pelo candidato |
+| 19/10/2026 | Claude Code (Claude Opus) | `backend/test/market.e2e-spec.ts`, `backend/src/market/domain/purchase.spec.ts`, ADR-007 | revisão da compra contra o prompt da Etapa 6.1; testes de compras simultâneas, rollback com falha provocada por trigger no banco de teste e consultas depois da compra; mutações para provar os testes | em revisão pelo candidato |
