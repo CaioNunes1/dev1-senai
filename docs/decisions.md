@@ -224,3 +224,44 @@ Formato curto: contexto → decisão → alternativas → consequências. Status
   - Deixar a correspondência sigla × nome só na API: o erro mais comum do formulário só apareceria depois do envio.
   - Fixar o fuso no `setup` dos testes: o `TZ` precisa estar definido antes do primeiro `Intl`.
 - **Consequências:** o aviso de 20 clubes no diálogo usa a lista do menu e é só orientação; o envio continua e a recusa vem da API. As abas Escalação e Histórico e os botões "Comprar jogadores" e "Vender" do Figma ficam para as etapas que têm esses endpoints na tela.
+
+## ADR-022 — Histórico e CSV: uma consulta para os dois endpoints, totais em centavos e CSV escrito à mão
+
+- **Status:** Aceita (20/10/2026, Etapa 6.3)
+- **Contexto:** RN17 e RN18 pedem histórico com `summary` e exportação em CSV com os mesmos filtros e a mesma ordem, valores do momento e um formato de arquivo exato (UTF-8 sem BOM, LF, `;`, vírgula decimal, escape de aspas).
+- **Decisão:**
+  1. **Onde fica:** no módulo `market`, com um `TransactionsController` (rotas sob `/clubs/{id}`) e um `TransactionHistoryService`. A compra e a venda não mudaram.
+  2. **Uma só consulta:** um único método privado (`findTransactions`) confere o clube (404), o jogador do filtro (404 se inexistente ou excluído) e busca com `ORDER BY criado_em DESC, id DESC`. O JSON e o CSV saem dela, então não há como divergir. Os filtros passam por um pipe só (`TransactionFiltersPipe`), com as mesmas recusas 400 nos dois endpoints.
+  3. **`summary` no código, em centavos:** as linhas já são lidas para o `data`, e somá-las em inteiros é exato e evita uma 2ª consulta. A função pura `summarizeTransactions` só soma o que está gravado (`value + fee` das compras, `cash_change`, `penalty` e `profit` com sinal das vendas, `fee` de todas).
+  4. **CSV sem biblioteca:** `toTransactionsCsv` monta as linhas. O escape segue só a regra do enunciado (aspas quando há `;` ou `"`, aspa interna duplicada), e o valor usa o `formatMoney` já existente (2 casas, vírgula, `-`, sem milhar).
+  5. **Cabeçalhos do CSV:** o `Content-Type: text/csv; charset=utf-8` e o `Content-Disposition` (`transacoes-clube-{id}.csv`) só são definidos depois que a consulta deu certo. Assim, as recusas continuam `application/json` pelo filtro global.
+  6. `player_id` acima de 2.147.483.647 → 400, como os demais inteiros de query (o enunciado não envia esse caso).
+- **Alternativas:**
+  - Somar no banco com `aggregate`/`groupBy`: seria uma 2ª consulta, e os totais por tipo exigiriam `groupBy` mais montagem.
+  - Biblioteca de CSV: dependência nova para 8 colunas, e o formato exato (LF na última linha, escape só com `;` e aspas) precisaria ser configurado e conferido do mesmo jeito.
+  - `@Header()` do Nest: o cabeçalho `text/csv` ficaria também nas respostas de erro, e o `res.json` do Express não troca um `Content-Type` já definido.
+- **Consequências:** o histórico não é paginado (o contrato não pede). O volume esperado é pequeno: no máximo 20 clubes e poucas operações.
+
+## ADR-023 — Índice único parcial para um contrato ATIVO por jogador (proposta, não aplicada)
+
+- **Status:** Proposta (20/10/2026, Etapa 6.3). **Não executada**: depende de autorização do usuário.
+- **Situação atual:** `contratos` só tem a chave primária (`contratos_pkey`). Conferido em `pg_indexes` nos bancos `passe` e `passe_test` em 20/10/2026. A regra "um contrato ATIVO por jogador" é garantida só pela aplicação: a compra trava a linha do jogador (`FOR UPDATE`) e exige `clube_id` nulo, e a venda encerra o contrato na mesma transação (ADR-007). Os testes e2e de concorrência provam esse caminho.
+- **Dados:** consulta somente leitura nos dois bancos, em 20/10/2026. Nenhum jogador com mais de um contrato ATIVO e nenhum contrato ATIVO incoerente com `jogadores.clube_id` (os dois bancos estavam sem contratos ATIVOS no momento).
+- **SQL proposto** (migration nova, aditiva, criada com `npx prisma migrate dev --create-only --name contrato_ativo_unico` e editada à mão):
+
+```sql
+CREATE UNIQUE INDEX "contratos_jogador_ativo_key"
+  ON "contratos" ("jogador_id")
+  WHERE "situacao" = 'ATIVO';
+```
+
+- **Rollback:** `DROP INDEX "contratos_jogador_ativo_key";` em outra migration (o Prisma não tem "down" automático).
+- **Benefício:** defesa em profundidade. Se um caminho futuro gravar contrato sem travar o jogador, o banco recusa o 2º contrato ATIVO (`P2002`). Também documenta a invariante no próprio banco.
+- **Riscos:**
+  1. **O Prisma 6 não representa índice parcial no `schema.prisma`.** O índice existiria só na migration, e um `migrate dev` futuro pode detectar a diferença e propor `DROP INDEX` na migration gerada. Cada nova migration precisaria ser revisada para remover esse `DROP`.
+  2. Com o lock atual, o índice nunca dispara. Se disparar, vira `P2002`, hoje mapeado para 409 só na criação de clube. Seria preciso tratar na compra, senão sai 500.
+  3. O enunciado fixa as tabelas e colunas, não os índices. Um índice extra não muda colunas nem tipos, então é compatível com a estrutura obrigatória.
+- **Efeito nos testes:** os e2e de concorrência continuam iguais, porque a 2ª compra é recusada antes, no lock. Para testar o índice, um e2e precisaria inserir um 2º contrato ATIVO direto pelo Prisma e esperar o erro de unicidade.
+- **Como validar depois de aplicar:** `SELECT indexdef FROM pg_indexes WHERE indexname = 'contratos_jogador_ativo_key'`; rodar `npm run test:e2e`; conferir que `npx prisma migrate diff` não propõe remover o índice.
+- **Recomendação:** aplicar, mas só junto com o tratamento de `P2002` na compra (409) e uma nota no `CLAUDE.md` sobre o `DROP INDEX` que o Prisma pode gerar. Benefício real, custo baixo, sem mudar o contrato da API.
+

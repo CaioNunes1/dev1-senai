@@ -8,8 +8,9 @@
 - **Mercado (Etapa 6, numeração do usuário em 19/10):**
   - 6.1 (compra no backend): já estava implementada desde 18/10; foi revisada contra o prompt em 19/10 e ganhou testes de concorrência, rollback e reflexo nas consultas.
   - 6.2 (venda no backend): também já implementada em 18/10; revisada em 19/10 e ganhou testes de concorrência, rollback e reflexo nas consultas.
-  - 6.3 (histórico e CSV), 6.4 e 6.5 (telas): pendentes.
-- **Próxima etapa:** 6.3 — histórico de transações, filtros, `summary` e CSV (RN17–RN18), ainda não implementados (aguarda autorização do usuário).
+  - 6.3 (histórico, `summary` e CSV no backend): ✅ implementada em 20/10.
+  - 6.4 e 6.5 (telas): pendentes.
+- **Próxima etapa:** 6.4 — telas do mercado (aguarda autorização do usuário). Pendente de decisão: índice único de contrato ATIVO (ADR-023, proposta).
 - **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; 9 commits que alteram `frontend/`, todos de 18/10 e já no `origin` (5.1 a 5.3); a 5.4 ainda não foi commitada (3 commits de código sugeridos → 12). Faltam dias de push: só 18/10 até agora. Prazo: 23/10.
 - **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (último commit `292b86f`, docs da 5.2).
 
@@ -45,6 +46,20 @@
 | 5.2 | Listagem de jogadores (F1 Jogadores, parte) | ✅ 18/10 | ver "Etapa 5.2" | ADR-019; 1 bug achado na aplicação real |
 | 5.3 | Operações de jogadores (F1 Jogadores; F2 formulários; F3 mensagens) | ✅ 18/10 | ver "Etapa 5.3" | ADR-020; React Hook Form + Zod instalados |
 | 5.4 | Clubes: lista, cadastro e página do clube (F1 Clubes; F2 formulário; F3) | ✅ 18/10 | ver "Etapa 5.4" | ADR-021; sem bibliotecas novas |
+
+### Etapa 6.3 — histórico, summary e CSV no backend (20/10/2026)
+
+| Verificação | Resultado |
+| --- | --- |
+| Referência antes de mudar | 530 unitários + 238 e2e ok |
+| Endpoints | `GET /clubs/{id}/transactions` (`data` + `summary`) e `GET /clubs/{id}/transactions/export` (`text/csv; charset=utf-8`, `Content-Disposition`), com o mesmo pipe de filtros e a mesma consulta (ADR-022) |
+| Testes unitários novos (48) | **Filtros:** `type` (4 válidos, 10 inválidos, repetido na URL) e `player_id` (3 válidos, 10 inválidos). **Summary:** exemplo completo e só VENDA do README, só COMPRA, lucro positivo/negativo/zero, vazio. **CSV:** exemplo do README byte a byte, sem BOM e sem CR, só cabeçalho, ordem recebida, negativos, zero, sem milhar, acentos, aspas e `;` |
+| Testes e2e novos (36) | **A+B:** compra e venda oficiais e depois renomear e deixar Doente; o histórico continua igual ao README 2.3.3, e o CSV igual ao 2.3.4 byte a byte. **Conciliação:** 300,00 + soma = 296,85. **C:** jogador excluído continua no histórico geral; `player_id` dele → 404 em JSON nos dois endpoints; nenhuma transação apagada. **D:** 2 clubes, 3 jogadores, prejuízo; 8 combinações de filtro com linhas, `summary` e CSV correspondentes. **F:** mesmo `created_at` → id decrescente (relógio fixo, sem depender de velocidade). Leitura não altera nada (snapshot antes e depois). Compra recusada não aparece. **E:** clube sem transações → `data` vazia, `summary` zero e CSV só com o cabeçalho. 14 filtros inválidos (400/404) e 4 ids de clube (404), sempre em JSON. Escape com nomes criados pela API |
+| Mutações | sem desempate por id → 1 falhou; lucro sem sinal → 5 e2e + 1 unitário; CSV com CRLF → 6 e2e + 6 unitários; filtro aceitando jogador excluído → 1; sem escape → 1 e2e + 1 unitário; código restaurado |
+| `npm test` | 26 suítes, 578 testes ok |
+| `npm run test:e2e` | 4 suítes, 274 testes ok (103 no mercado) |
+| Lint, formatação, build | ok |
+| Índice de contrato ATIVO | só análise (ADR-023); bancos `passe` e `passe_test` sem violações (consulta somente leitura); migration **não** criada |
 
 ### Etapa 6.2 — venda no backend: revisão e testes (19/10/2026)
 
@@ -267,3 +282,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 18/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/features/clubs/`, `shared/lib/format.ts` (datas em Brasília), `shared/lib/text.ts` (`removeAccents`), `shared/components/button-styles.ts`, `vite.config.ts` (`TZ=UTC` nos testes), testes, ADR-021 | leitura dos frames C01–C05, C09 e E04 e do contrato real de clubes no backend; lista, cadastro e página do clube; testes com API falsa com estado e mutações; validação no navegador numa cópia isolada com o banco de teste, inclusive o limite de 20 clubes | em revisão pelo candidato |
 | 19/10/2026 | Claude Code (Claude Opus) | `backend/test/market.e2e-spec.ts`, `backend/src/market/domain/purchase.spec.ts`, ADR-007 | revisão da compra contra o prompt da Etapa 6.1; testes de compras simultâneas, rollback com falha provocada por trigger no banco de teste e consultas depois da compra; mutações para provar os testes | em revisão pelo candidato |
 | 19/10/2026 | Claude Code (Claude Opus) | `backend/test/market.e2e-spec.ts`, ADR-007 | revisão da venda contra RN15, RN16 e o exemplo 2.3.2; testes de vendas simultâneas, venda × compra cruzadas, rollback com falha provocada por trigger no banco de teste e consultas depois da venda; mutações para provar os testes | em revisão pelo candidato |
+| 20/10/2026 | Claude Code (Claude Opus) | `backend/src/market/` (transactions.controller, transaction-history.service, domain/transaction-history, domain/transactions-csv, dto/transaction-filters, mapper), `test/market.e2e-spec.ts`, ADR-022, ADR-023 | histórico com filtros e `summary`, exportação CSV comparada byte a byte, testes com exemplos oficiais e mutações; análise somente leitura do índice de contrato ativo | em revisão pelo candidato |

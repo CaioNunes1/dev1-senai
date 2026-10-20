@@ -54,7 +54,7 @@ Legenda: ✱ coluna adicional (permitida pelo enunciado).
 | situacao | enum `ContractStatus` (ATIVO, ENCERRADO, RESCINDIDO) | |
 | iniciado_em / encerrado_em | timestamptz / timestamptz null | |
 
-✱ Índice único parcial "um contrato ATIVO por jogador" seria desejável, mas o Prisma não expressa índices parciais no schema; a invariante é garantida pela transação da compra (jogador precisa estar livre). Reavaliar na etapa de compra.
+✱ Índice único parcial "um contrato ATIVO por jogador" seria desejável, mas o Prisma não expressa índices parciais no schema; a invariante é garantida pela transação da compra (jogador precisa estar livre). Reavaliado na Etapa 6.3 (ADR-023): proposta com SQL pronto, aguardando autorização; não aplicada.
 
 ### `transacoes` → `MarketTransaction`
 

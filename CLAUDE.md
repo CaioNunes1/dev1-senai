@@ -104,6 +104,13 @@ Notas da Etapa 5.4 (clubes):
 - Tabela larga em 1366 px: medir `scrollWidth` × `clientWidth` do quadro da tabela; preferir largura automática e quebra do nome a esconder coluna.
 - Limpar o `passe_test` com TRUNCATE foi negado pela permissão; para ver o estado vazio real, pedir ao usuário ou rodar o e2e.
 
+Notas das Etapas 6.1–6.3 (mercado):
+- Histórico e CSV: uma só consulta (`TransactionHistoryService.findTransactions`) e um só pipe de filtros para os dois endpoints; nunca filtrar ou ordenar de novo no CSV (ADR-022).
+- Cabeçalho `text/csv` só depois da consulta dar certo (`@Res({ passthrough: true })`), nunca com `@Header()`: as recusas precisam continuar em JSON.
+- `summary` só soma valores gravados, em centavos; não recalcular taxa, multa ou comissão.
+- Rollback em e2e: helper `withFailureOn(tabela, evento, ação)` (trigger temporário só no `passe_test`).
+- Índice único de contrato ATIVO: proposta na ADR-023, **não aplicar sem autorização**.
+
 Notas da Etapa 1:
 - Versões fixadas: Nest 11, TypeScript 5.9, Prisma 6, ESLint 9 (motivos na ADR-001). Não atualizar majors sem nova ADR.
 - Nunca usar `ValidationPipe`/`ParseIntPipe` padrão: usar `StrictValidationPipe` (global) e `ParseIdPipe` (ADR-012).
