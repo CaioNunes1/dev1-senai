@@ -43,3 +43,19 @@ export class SaleResponse extends TransactionResponse {
   @ApiProperty({ example: 296.85, description: 'Caixa do clube depois da venda.' })
   club_cash: number;
 }
+
+/** Totais das transações filtradas (RN17), em moedas. */
+export class TransactionSummaryResponse {
+  @ApiProperty({ example: 38.85, description: 'value + fee das COMPRAS.' }) total_spent: number;
+  @ApiProperty({ example: 35.7, description: 'cash_change das VENDAS.' }) total_received: number;
+  @ApiProperty({ example: 2.15, description: 'fee de todas (taxas e comissões).' })
+  total_fees: number;
+  @ApiProperty({ example: 4.0, description: 'penalty das VENDAS.' }) total_penalties: number;
+  @ApiProperty({ example: 3.0, description: 'profit das VENDAS, com sinal.' }) total_profit: number;
+}
+
+/** Resposta de `GET /clubs/{id}/transactions` (README › 2.3.3). */
+export class TransactionHistoryResponse {
+  @ApiProperty({ type: [TransactionResponse] }) data: TransactionResponse[];
+  @ApiProperty({ type: TransactionSummaryResponse }) summary: TransactionSummaryResponse;
+}
