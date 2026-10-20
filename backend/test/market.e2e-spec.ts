@@ -835,4 +835,373 @@ describe('Mercado e clubes (e2e)', () => {
       expectError(await http().get(`/api/v1/clubs/${id}`), 404);
     });
   });
+
+  describe('GET /clubs/{id}/transactions e /export (RN17, RN18)', () => {
+    const CSV_HEADER_LINE =
+      'data_hora;tipo;jogador;valor;taxa_ou_comissao;multa;lucro;variacao_caixa\n';
+    const ZERO_SUMMARY = {
+      total_spent: 0,
+      total_received: 0,
+      total_fees: 0,
+      total_penalties: 0,
+      total_profit: 0,
+    };
+
+    const history = (clubId: number | string, query = '') =>
+      http().get(`/api/v1/clubs/${clubId}/transactions${query}`);
+
+    /** Exportação com o corpo cru (bytes), para conferir BOM, LF e UTF-8. */
+    const exportCsv = (clubId: number | string, query = '') =>
+      http()
+        .get(`/api/v1/clubs/${clubId}/transactions/export${query}`)
+        .buffer(true)
+        .parse((res, callback) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => callback(null, Buffer.concat(chunks)));
+        });
+
+    function expectCsv(response: request.Response, expected: string): void {
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toBe('text/csv; charset=utf-8');
+      const bytes = response.body as Buffer;
+      expect(bytes.equals(Buffer.from(expected, 'utf8'))).toBe(true);
+      expect(bytes.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf]))).toBe(false);
+    }
+
+    /** Fluxo oficial do Meia Lua: compra em 02/11 (37,00 + 1,85) e venda em 05/11 (40,00). */
+    async function meiaLuaBoughtAndSold(): Promise<{ clubId: number; playerId: number }> {
+      const clubId = await createClub('Águias FC', 'AGU');
+      const playerId = await createPlayer(MEIA_LUA);
+      await http()
+        .patch(`/api/v1/players/${playerId}/condition`)
+        .send({ condition: 'MAL_CONDICIONADO' });
+      await bought(playerId, clubId);
+      await http().patch(`/api/v1/players/${playerId}/condition`).send({ condition: 'APTO' });
+      clock.setBrasilia('2026-11-05T16:40-03:00');
+      expect((await sell(playerId)).status).toBe(200);
+      return { clubId, playerId };
+    }
+
+    const OFFICIAL_SALE = {
+      id: 2,
+      club_id: 1,
+      player_id: 1,
+      player_name: 'Meia Lua',
+      type: 'VENDA',
+      value: 40,
+      fee: 0.3,
+      penalty: 4,
+      profit: 3,
+      cash_change: 35.7,
+      created_at: '2026-11-05T16:40:00-03:00',
+    };
+    const OFFICIAL_PURCHASE = {
+      id: 1,
+      club_id: 1,
+      player_id: 1,
+      player_name: 'Meia Lua',
+      type: 'COMPRA',
+      value: 37,
+      fee: 1.85,
+      penalty: 0,
+      profit: null,
+      cash_change: -38.85,
+      created_at: '2026-11-02T10:15:00-03:00',
+    };
+    const OFFICIAL_CSV_SALE =
+      '2026-11-05T16:40:00-03:00;VENDA;Meia Lua;40,00;0,30;4,00;3,00;35,70\n';
+    const OFFICIAL_CSV_PURCHASE =
+      '2026-11-02T10:15:00-03:00;COMPRA;Meia Lua;37,00;1,85;0,00;;-38,85\n';
+
+    it('A + B: compra e venda do exemplo, depois de renomear e mudar a condição, mostram os valores do momento', async () => {
+      const { clubId, playerId } = await meiaLuaBoughtAndSold();
+      await http()
+        .put(`/api/v1/players/${playerId}`)
+        .send({ name: 'Meia Lua Renomeado', position: 'MEI', agility: 85, age: 26 });
+      await http().patch(`/api/v1/players/${playerId}/condition`).send({ condition: 'DOENTE' });
+      expect((await http().get(`/api/v1/players/${playerId}`)).body.market_value).not.toBe(40);
+
+      const full = await history(clubId);
+      expect(full.status).toBe(200);
+      expect(full.headers['content-type']).toMatch(/^application\/json/);
+      expect(full.body).toEqual({
+        data: [OFFICIAL_SALE, OFFICIAL_PURCHASE],
+        summary: {
+          total_spent: 38.85,
+          total_received: 35.7,
+          total_fees: 2.15,
+          total_penalties: 4,
+          total_profit: 3,
+        },
+      });
+
+      expect((await history(clubId, '?type=VENDA')).body).toEqual({
+        data: [OFFICIAL_SALE],
+        summary: {
+          ...ZERO_SUMMARY,
+          total_received: 35.7,
+          total_fees: 0.3,
+          total_penalties: 4,
+          total_profit: 3,
+        },
+      });
+      expectCsv(
+        await exportCsv(clubId),
+        CSV_HEADER_LINE + OFFICIAL_CSV_SALE + OFFICIAL_CSV_PURCHASE,
+      );
+      expectCsv(await exportCsv(clubId, '?type=VENDA'), CSV_HEADER_LINE + OFFICIAL_CSV_SALE);
+    });
+
+    it('conciliação: 300,00 + soma de cash_change do histórico completo = caixa do clube (296,85)', async () => {
+      const { clubId } = await meiaLuaBoughtAndSold();
+
+      const transactions = (await history(clubId)).body.data as { cash_change: number }[];
+      const cashChangeCents = transactions.reduce(
+        (total, transaction) => total + Math.round(transaction.cash_change * 100),
+        0,
+      );
+      const club = await http().get(`/api/v1/clubs/${clubId}`);
+      expect(30000 + cashChangeCents).toBe(Math.round(club.body.cash * 100));
+      expect(club.body.cash).toBe(296.85);
+    });
+
+    it('C: jogador excluído continua no histórico geral; filtrar por ele → 404 nos dois endpoints', async () => {
+      const { clubId, playerId } = await meiaLuaBoughtAndSold();
+      expect((await http().delete(`/api/v1/players/${playerId}`)).status).toBe(204);
+
+      expect((await history(clubId)).body.data).toEqual([OFFICIAL_SALE, OFFICIAL_PURCHASE]);
+      expectCsv(
+        await exportCsv(clubId),
+        CSV_HEADER_LINE + OFFICIAL_CSV_SALE + OFFICIAL_CSV_PURCHASE,
+      );
+      expectError(await history(clubId, `?player_id=${playerId}`), 404);
+      const exported = await exportCsv(clubId, `?player_id=${playerId}`);
+      expect(exported.status).toBe(404);
+      expect(exported.headers['content-type']).toMatch(/^application\/json/);
+      expect(JSON.parse((exported.body as Buffer).toString('utf8'))).toEqual({
+        message: 'Jogador não encontrado.',
+      });
+      expect(await prisma.marketTransaction.count()).toBe(2);
+    });
+
+    describe('D e F: dois clubes, três jogadores, filtros e empate de data e hora', () => {
+      let aguias: number;
+      let delta: number;
+      let first: number;
+      let second: number;
+      let third: number;
+
+      /**
+       * Águias: compra Um (20,00) às 10:15 e Dois (40,00 + 2,00) às 10:20; vende Um às 10:30 por
+       * 15,00 (multa 10% = 1,50; prejuízo 5,00). Delta: às 10:40, no mesmo instante, compra Um
+       * (15,00) e Três (10,00).
+       */
+      beforeEach(async () => {
+        aguias = await createClub('Águias FC', 'AGU');
+        delta = await createClub('Delta FC', 'DLT');
+        first = await playerWorth('20.00', 'Jogador Um');
+        second = await playerWorth('40.00', 'Jogador Dois');
+        third = await playerWorth('10.00', 'Jogador Três');
+        await bought(first, aguias);
+        clock.setBrasilia('2026-11-02T10:20-03:00');
+        await bought(second, aguias);
+        await prisma.player.update({ where: { id: first }, data: { baseValue: '15.00' } });
+        clock.setBrasilia('2026-11-02T10:30-03:00');
+        expect((await sell(first)).body).toMatchObject({ value: 15, penalty: 1.5, profit: -5 });
+        clock.setBrasilia('2026-11-02T10:40-03:00');
+        await bought(first, delta);
+        await bought(third, delta);
+      });
+
+      const rows = (response: request.Response) =>
+        (response.body.data as { id: number; type: string; player_name: string }[]).map(
+          (row) => `${row.id} ${row.type} ${row.player_name}`,
+        );
+
+      it.each([
+        [
+          '',
+          ['3 VENDA Jogador Um', '2 COMPRA Jogador Dois', '1 COMPRA Jogador Um'],
+          {
+            total_spent: 62,
+            total_received: 13.5,
+            total_fees: 2,
+            total_penalties: 1.5,
+            total_profit: -5,
+          },
+        ],
+        [
+          '?type=COMPRA',
+          ['2 COMPRA Jogador Dois', '1 COMPRA Jogador Um'],
+          { total_spent: 62, total_fees: 2 },
+        ],
+        [
+          '?type=VENDA',
+          ['3 VENDA Jogador Um'],
+          { total_received: 13.5, total_penalties: 1.5, total_profit: -5 },
+        ],
+        [
+          '?type=VENDA,COMPRA',
+          ['3 VENDA Jogador Um', '2 COMPRA Jogador Dois', '1 COMPRA Jogador Um'],
+          {
+            total_spent: 62,
+            total_received: 13.5,
+            total_fees: 2,
+            total_penalties: 1.5,
+            total_profit: -5,
+          },
+        ],
+        [
+          '?player_id=1',
+          ['3 VENDA Jogador Um', '1 COMPRA Jogador Um'],
+          { total_spent: 20, total_received: 13.5, total_penalties: 1.5, total_profit: -5 },
+        ],
+        ['?type=COMPRA&player_id=1', ['1 COMPRA Jogador Um'], { total_spent: 20 }],
+        [
+          '?player_id=1&type=VENDA',
+          ['3 VENDA Jogador Um'],
+          { total_received: 13.5, total_penalties: 1.5, total_profit: -5 },
+        ],
+        ['?player_id=3', [], {}],
+      ])(
+        'Águias%s → linhas, summary e CSV correspondentes',
+        async (query, expectedRows, summary) => {
+          const response = await history(aguias, query);
+          expect(response.status).toBe(200);
+          expect(rows(response)).toEqual(expectedRows);
+          expect(response.body.summary).toEqual({ ...ZERO_SUMMARY, ...summary });
+
+          const csv = (await exportCsv(aguias, query)).body as Buffer;
+          const csvLines = csv.toString('utf8').split('\n').slice(1, -1);
+          const fromJson = (response.body.data as { type: string; player_name: string }[]).map(
+            (row) => `${row.type};${row.player_name}`,
+          );
+          expect(csvLines.map((line) => line.split(';').slice(1, 3).join(';'))).toEqual(fromJson);
+        },
+      );
+
+      it('exporta o histórico completo do Águias com prejuízo negativo e lucro vazio nas compras', async () => {
+        expectCsv(
+          await exportCsv(aguias),
+          CSV_HEADER_LINE +
+            '2026-11-02T10:30:00-03:00;VENDA;Jogador Um;15,00;0,00;1,50;-5,00;13,50\n' +
+            '2026-11-02T10:20:00-03:00;COMPRA;Jogador Dois;40,00;2,00;0,00;;-42,00\n' +
+            '2026-11-02T10:15:00-03:00;COMPRA;Jogador Um;20,00;0,00;0,00;;-20,00\n',
+        );
+      });
+
+      it('F: mesmo created_at → id decrescente, igual no JSON e no CSV; um clube não vê o outro', async () => {
+        const response = await history(delta);
+        expect(rows(response)).toEqual(['5 COMPRA Jogador Três', '4 COMPRA Jogador Um']);
+        expect(
+          new Set((response.body.data as { created_at: string }[]).map((row) => row.created_at)),
+        ).toEqual(new Set(['2026-11-02T10:40:00-03:00']));
+        expect(response.body.summary).toEqual({ ...ZERO_SUMMARY, total_spent: 25 });
+        expectCsv(
+          await exportCsv(delta),
+          CSV_HEADER_LINE +
+            '2026-11-02T10:40:00-03:00;COMPRA;Jogador Três;10,00;0,00;0,00;;-10,00\n' +
+            '2026-11-02T10:40:00-03:00;COMPRA;Jogador Um;15,00;0,00;0,00;;-15,00\n',
+        );
+      });
+
+      it('conciliação dos dois clubes e leitura sem efeito colateral', async () => {
+        const snapshot = async () => ({
+          clubs: await prisma.club.findMany({ orderBy: { id: 'asc' } }),
+          players: await prisma.player.findMany({ orderBy: { id: 'asc' } }),
+          contracts: await prisma.contract.findMany({ orderBy: { id: 'asc' } }),
+          transactions: await prisma.marketTransaction.findMany({ orderBy: { id: 'asc' } }),
+        });
+        const before = await snapshot();
+
+        for (const clubId of [aguias, delta]) {
+          const changes = (await history(clubId)).body.data as { cash_change: number }[];
+          const total = changes.reduce((sum, row) => sum + Math.round(row.cash_change * 100), 0);
+          const club = await http().get(`/api/v1/clubs/${clubId}`);
+          expect(30000 + total).toBe(Math.round(club.body.cash * 100));
+          await exportCsv(clubId, '?type=COMPRA');
+        }
+
+        expect(await snapshot()).toEqual(before);
+      });
+
+      it('compra recusada não aparece no histórico', async () => {
+        expectError(
+          await buy(first, { club_id: aguias, loyalty_until: '2027-03-02T10:15-03:00' }),
+          409,
+        );
+        expect(rows(await history(aguias))).toHaveLength(3);
+      });
+    });
+
+    it('E: clube sem transações → data vazia, summary zerado e CSV só com o cabeçalho', async () => {
+      const clubId = await createClub('Águias FC', 'AGU');
+
+      expect((await history(clubId)).body).toEqual({ data: [], summary: ZERO_SUMMARY });
+      expectCsv(await exportCsv(clubId), CSV_HEADER_LINE);
+      expectCsv(await exportCsv(clubId, '?type=VENDA'), CSV_HEADER_LINE);
+    });
+
+    it.each([
+      ['?type=', 400],
+      ['?type=compra', 400],
+      ['?type=COMPRA,COMPRA', 400],
+      ['?type=COMPRA,%20VENDA', 400],
+      ['?type=COMPRA,OUTRO', 400],
+      ['?type=COMPRA&type=VENDA', 400],
+      ['?player_id=', 400],
+      ['?player_id=0', 400],
+      ['?player_id=01', 400],
+      ['?player_id=-1', 400],
+      ['?player_id=1.5', 400],
+      ['?player_id=1e2', 400],
+      ['?player_id=abc', 400],
+      ['?player_id=999', 404],
+    ])('filtro %s → %i em JSON nos dois endpoints', async (query, status) => {
+      const clubId = await createClub('Águias FC', 'AGU');
+      await createPlayer(MEIA_LUA);
+
+      expectError(await history(clubId, query), status);
+      const exported = await exportCsv(clubId, query);
+      expect(exported.status).toBe(status);
+      expect(exported.headers['content-type']).toMatch(/^application\/json/);
+      expect(typeof JSON.parse((exported.body as Buffer).toString('utf8')).message).toBe('string');
+    });
+
+    it.each(['999', 'abc', '0', '01'])('clube %s → 404 nos dois endpoints', async (id) => {
+      expectError(await history(id), 404);
+      const exported = await exportCsv(id);
+      expect(exported.status).toBe(404);
+      expect(exported.headers['content-type']).toMatch(/^application\/json/);
+    });
+
+    it('nome com aspas e ponto e vírgula sai escapado no CSV, com o nome gravado', async () => {
+      const clubId = await createClub('Águias FC', 'AGU');
+      const quoted = await playerWorth('20.00', 'Zé "Foguete" Lima');
+      const semicolon = await playerWorth('10.00', 'Ana; Bia');
+      await bought(quoted, clubId);
+      clock.setBrasilia('2026-11-02T10:16-03:00');
+      await bought(semicolon, clubId);
+
+      expect(
+        ((await history(clubId)).body.data as { player_name: string }[]).map(
+          (row) => row.player_name,
+        ),
+      ).toEqual(['Ana; Bia', 'Zé "Foguete" Lima']);
+      expectCsv(
+        await exportCsv(clubId),
+        CSV_HEADER_LINE +
+          '2026-11-02T10:16:00-03:00;COMPRA;"Ana; Bia";10,00;0,00;0,00;;-10,00\n' +
+          '2026-11-02T10:15:00-03:00;COMPRA;"Zé ""Foguete"" Lima";20,00;0,00;0,00;;-20,00\n',
+      );
+    });
+
+    it('a exportação traz Content-Disposition com nome de arquivo', async () => {
+      const clubId = await createClub('Águias FC', 'AGU');
+      expect((await exportCsv(clubId)).headers['content-disposition']).toBe(
+        `attachment; filename="transacoes-clube-${clubId}.csv"`,
+      );
+    });
+  });
 });
