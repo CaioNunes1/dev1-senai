@@ -88,11 +88,28 @@ const SQUAD: SquadPlayer[] = [
 
 const DETAIL: ClubDetail = { ...CLUB_ROW, players: SQUAD };
 
-/** `GET /clubs` para o menu e a trilha; `GET /clubs/{id}` conforme `detail`. */
+const EMPTY_HISTORY = {
+  data: [],
+  summary: {
+    total_spent: 0,
+    total_received: 0,
+    total_fees: 0,
+    total_penalties: 0,
+    total_profit: 0,
+  },
+};
+
+/**
+ * `GET /clubs` para o menu e a trilha; `GET /clubs/{id}` conforme `detail`; histórico vazio
+ * (a aba Histórico tem os próprios testes em `market/TransactionHistory.test.tsx`).
+ */
 function mockClubApi(detail: (url: URL) => Response | Promise<Response>) {
   return mockApi((url) => {
     if (url.pathname.endsWith('/clubs')) {
       return jsonResponse([CLUB_ROW]);
+    }
+    if (url.pathname.endsWith('/transactions')) {
+      return jsonResponse(EMPTY_HISTORY);
     }
     if (url.pathname.includes('/clubs/')) {
       return detail(url);
