@@ -8,6 +8,17 @@ export function formatMoney(value: number): string {
   return moneyFormatter.format(value);
 }
 
+/**
+ * Valor com o sinal sempre visível, como a API devolve (ex.: entrada 35.7 → "+35,70";
+ * saída -38.85 → "-38,85"; zero → "0,00", sem sinal).
+ */
+export function formatSignedMoney(value: number): string {
+  if (value === 0) {
+    return formatMoney(0);
+  }
+  return value > 0 ? `+${formatMoney(value)}` : formatMoney(value);
+}
+
 /** Primeira letra minúscula, para compor rótulos (ex.: "Ordenar: nome"). */
 export function lowerFirst(text: string): string {
   return text.charAt(0).toLocaleLowerCase('pt-BR') + text.slice(1);

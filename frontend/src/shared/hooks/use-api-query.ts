@@ -12,6 +12,11 @@ export type ApiQuery<T> = {
 
 type Settled<T> = { key: string; requestId: string; data?: T; error?: ApiError };
 
+type QueryOptions = {
+  /** `false` não faz o pedido (ex.: a mesma consulta já está aberta em outro lugar). */
+  enabled?: boolean;
+};
+
 /**
  * Carrega dados da API e recarrega quando `key` muda, quando `retry` é chamado ou quando
  * alguém pede `refreshAll`. Respostas atrasadas de pedidos antigos são descartadas.
@@ -19,6 +24,7 @@ type Settled<T> = { key: string; requestId: string; data?: T; error?: ApiError }
 export function useApiQuery<T>(
   key: string,
   load: (signal: AbortSignal) => Promise<T>,
+  { enabled = true }: QueryOptions = {},
 ): ApiQuery<T> {
   const { version } = useDataRefresh();
   const [attempt, setAttempt] = useState(0);
@@ -27,6 +33,9 @@ export function useApiQuery<T>(
   const runLoad = useEffectEvent(load);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     const controller = new AbortController();
     runLoad(controller.signal).then(
       (data) => {
@@ -41,13 +50,17 @@ export function useApiQuery<T>(
       },
     );
     return () => controller.abort();
-  }, [key, requestId]);
+  }, [key, requestId, enabled]);
 
+  const retry = () => setAttempt((current) => current + 1);
+  if (!enabled) {
+    return { data: undefined, error: undefined, isLoading: false, retry };
+  }
   const isLoading = settled?.requestId !== requestId;
   return {
     data: settled?.key === key ? settled.data : undefined,
     error: isLoading ? undefined : settled.error,
     isLoading,
-    retry: () => setAttempt((current) => current + 1),
+    retry,
   };
 }

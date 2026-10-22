@@ -53,15 +53,53 @@ function buildApiUrl(path: string, query?: QueryParams): string {
  * com o `message` recebido, sem trocá-lo por um texto genérico.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', query, body, signal } = options;
+  const { body } = options;
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
+  const response = await send(path, options, headers);
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new ApiError(messageOf(payload) ?? UNEXPECTED_RESPONSE_MESSAGE, response.status);
+  }
+  return payload as T;
+}
 
-  let response: Response;
+type DownloadOptions = {
+  /** Tipo do arquivo esperado no sucesso (ex.: `text/csv`). */
+  accept: string;
+  query?: QueryParams;
+  signal?: AbortSignal;
+};
+
+/**
+ * `GET` de um arquivo (ex.: o CSV da RN18). No sucesso, devolve o corpo como `Blob`, com os
+ * bytes exatamente como vieram; as recusas da API chegam em JSON e viram `ApiError` com o
+ * `message`, como em `apiRequest`. Sucesso em outro formato também é recusado.
+ */
+export async function apiDownload(path: string, options: DownloadOptions): Promise<Blob> {
+  const { accept } = options;
+  const response = await send(path, options, { Accept: `${accept}, application/json` });
+  if (!response.ok) {
+    const payload = await readJson(response);
+    throw new ApiError(messageOf(payload) ?? UNEXPECTED_RESPONSE_MESSAGE, response.status);
+  }
+  const contentType = response.headers.get('Content-Type') ?? '';
+  if (contentType.split(';')[0].trim().toLowerCase() !== accept) {
+    throw new ApiError(UNEXPECTED_RESPONSE_MESSAGE, response.status);
+  }
+  return response.blob();
+}
+
+/** Envia o pedido; falha de rede vira `ApiError` sem status (cancelamento passa adiante). */
+async function send(
+  path: string,
+  { method = 'GET', query, body, signal }: RequestOptions,
+  headers: Record<string, string>,
+): Promise<Response> {
   try {
-    response = await fetch(buildApiUrl(path, query), {
+    return await fetch(buildApiUrl(path, query), {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -73,12 +111,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
     throw new ApiError(NETWORK_ERROR_MESSAGE, null);
   }
-
-  const payload = await readJson(response);
-  if (!response.ok) {
-    throw new ApiError(messageOf(payload) ?? UNEXPECTED_RESPONSE_MESSAGE, response.status);
-  }
-  return payload as T;
 }
 
 async function readJson(response: Response): Promise<unknown> {

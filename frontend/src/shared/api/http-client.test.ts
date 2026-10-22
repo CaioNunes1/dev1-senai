@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { jsonResponse, mockFetch, requestedUrl } from '../../test/fetch-mock';
-import { ApiError, apiRequest, resolveApiBaseUrl } from './http-client';
+import { ApiError, apiDownload, apiRequest, resolveApiBaseUrl } from './http-client';
 
 describe('resolveApiBaseUrl', () => {
   it.each([
@@ -83,5 +83,80 @@ describe('apiRequest', () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
 
     await expect(apiRequest('/players/1', { method: 'DELETE' })).resolves.toBeUndefined();
+  });
+});
+
+describe('apiDownload', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** CSV com acentos, aspas, `;` e LF, como o backend gera (RN18). */
+  const CSV =
+    'data_hora;tipo;jogador;valor;taxa_ou_comissao;multa;lucro;variacao_caixa\n' +
+    '2026-11-05T16:40:00-03:00;VENDA;"João ""Meia"" Lua; Jr.";40,00;0,30;4,00;3,00;35,70\n';
+
+  function csvResponse(body: string, contentType = 'text/csv; charset=utf-8'): Response {
+    return new Response(body, { status: 200, headers: { 'Content-Type': contentType } });
+  }
+
+  it('pede o arquivo com os query params e devolve os bytes exatamente como vieram', async () => {
+    const fetchMock = mockFetch();
+    fetchMock.mockResolvedValue(csvResponse(CSV));
+
+    const file = await apiDownload('/clubs/1/transactions/export', {
+      accept: 'text/csv',
+      query: { type: 'VENDA', player_id: 2 },
+    });
+
+    expect(requestedUrl(fetchMock)).toBe(
+      'http://localhost:3000/api/v1/clubs/1/transactions/export?type=VENDA&player_id=2',
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({
+      Accept: 'text/csv, application/json',
+    });
+    expect([...new Uint8Array(await file.arrayBuffer())]).toEqual([
+      ...new TextEncoder().encode(CSV),
+    ]);
+  });
+
+  it('CSV só com o cabeçalho também é um arquivo válido', async () => {
+    const fetchMock = mockFetch();
+    fetchMock.mockResolvedValue(csvResponse('data_hora;tipo\n'));
+
+    const file = await apiDownload('/x', { accept: 'text/csv' });
+
+    expect(await file.text()).toBe('data_hora;tipo\n');
+  });
+
+  it.each([400, 404])('recusa %i em JSON vira ApiError com o message da API', async (status) => {
+    const fetchMock = mockFetch();
+    fetchMock.mockResolvedValue(jsonResponse({ message: 'Jogador não encontrado.' }, status));
+
+    const error = await apiDownload('/x', { accept: 'text/csv' }).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status, message: 'Jogador não encontrado.' });
+  });
+
+  it('sucesso que não é o tipo pedido (ex.: JSON) é recusado, sem virar arquivo', async () => {
+    const fetchMock = mockFetch();
+    fetchMock.mockResolvedValue(jsonResponse({ data: [] }));
+
+    await expect(apiDownload('/x', { accept: 'text/csv' })).rejects.toMatchObject({
+      status: 200,
+      message: 'A API respondeu de forma inesperada. Tente de novo.',
+    });
+  });
+
+  it('falha de rede vira ApiError sem status', async () => {
+    const fetchMock = mockFetch();
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(apiDownload('/x', { accept: 'text/csv' })).rejects.toMatchObject({
+      status: null,
+    });
   });
 });

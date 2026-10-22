@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatBrasiliaDateTime, formatInteger, formatMoney, formatPercent } from './format';
+import {
+  formatBrasiliaDateTime,
+  formatInteger,
+  formatMoney,
+  formatPercent,
+  formatSignedMoney,
+} from './format';
 
 describe('formatMoney', () => {
   it.each([
@@ -48,5 +54,19 @@ describe('formatInteger e formatPercent', () => {
     [20, '20%'],
   ])('multa %d → %s', (value, expected) => {
     expect(formatPercent(value)).toBe(expected);
+  });
+});
+
+describe('formatSignedMoney', () => {
+  it.each([
+    [35.7, '+35,70'],
+    [-38.85, '-38,85'],
+    [3, '+3,00'],
+    [-5.7, '-5,70'],
+    [0, '0,00'],
+    [-0, '0,00'],
+    [1744.14, '+1.744,14'],
+  ])('%d → %s', (value, expected) => {
+    expect(formatSignedMoney(value)).toBe(expected);
   });
 });
