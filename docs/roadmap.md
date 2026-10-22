@@ -156,9 +156,13 @@ As telas de clubes (frontend) continuam previstas aqui, em commits separados.
 | 6.1 | Compra no backend (RN12–RN14, RN01, RN17) | ✅ implementada em 18/10 (Etapa 9 abaixo), revisada em 19/10 com testes de concorrência, rollback e consultas |
 | 6.2 | Venda no backend (RN15–RN16) | ✅ implementada em 18/10 (Etapa 10), revisada em 19/10 com testes de concorrência, rollback e consultas |
 | 6.3 | Histórico, filtros, `summary` e CSV (RN17–RN18) | ✅ 20/10/2026 (backend; a aba Histórico fica para as telas) |
-| 6.4 e 6.5 | Telas de compra e venda | pendente (Etapa 11) |
+| 6.4 | Tela de compra (F06, F07) | ✅ 21/10/2026 |
+| 6.5 | Tela de venda (F08) | pendente (Etapa 11) |
+| 6.6 | Aba Histórico: filtros, `summary` e CSV na tela (F09–F11) | ✅ 21/10/2026 |
 
 - **Commit sugerido (6.1):** `test(backend): cobre compras simultâneas, rollback e consultas depois da compra`.
+- **Commits sugeridos (6.6):** `feat(frontend): adiciona abas acessíveis, download de arquivo e consulta opcional` · `feat(frontend): mostra o histórico do clube com filtros, resumo da api e exportação csv` · `docs: registra o histórico no frontend e a ADR-025`.
+- **Commits sugeridos (6.4):** `feat(frontend): adiciona seleção de formulário e datas no horário de brasília para a compra` · `feat(frontend): compra jogadores livres pela lista com revisão, resultado da api e atualização das telas` · `docs: registra a compra no frontend e a ADR-024`.
 - **Commits sugeridos (6.3):** `feat(backend): consulta o histórico de transações do clube com filtros e resumo` · `feat(backend): exporta o histórico de transações em csv` · `docs: registra o histórico, o csv e a proposta de índice de contrato ativo`.
 - **Commit sugerido (6.2):** `test(backend): cobre vendas simultâneas, rollback da venda e consultas depois da venda`.
 

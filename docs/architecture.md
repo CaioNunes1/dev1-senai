@@ -138,16 +138,20 @@ frontend/
     │   ├── clubs/               ✅ api.ts (GET /clubs, GET /clubs/{id}, POST /clubs), useClubs/useClub, ClubsContext/useClubList,
     │   │                           club-schemas (Zod), club-labels, ClubsPage, ClubsTable, CreateClubDialog, ClubMonogram,
     │   │                           ClubDetailPage, ClubSummaryCards, SquadTable
-    │   ├── market/              compra, venda, histórico e CSV
+    │   ├── market/              ✅ api.ts (compra, histórico, CSV), loyalty-date (RN01), buy-player-schema (Zod),
+    │   │                           BuyPlayerDialog, PurchaseResultDialog, transaction-filters (única tradução
+    │   │                           dos filtros para a API e a URL), use-transactions, TransactionHistoryPanel,
+    │   │                           TransactionFiltersBar, TransactionsTable, TransactionSummaryBar · venda
     │   └── league/              ✅ MatchesPage e StandingsPage (provisórias) · escalação, partidas
     ├── styles/index.css         ✅ Tailwind v4 + tokens do Figma (@theme)
-    └── test/                    ✅ setup do Vitest, mock de fetch
+    └── test/                    ✅ setup do Vitest, mock de fetch, downloads falsos (download-mock)
 ```
 
 Regras:
 
 - Componentes **não chamam** `fetch`: `features/*/api.ts` (funções tipadas, campos no formato da API, ADR-018) → hooks → componentes. A única chamada a `fetch` do projeto está em `shared/api/http-client.ts`.
 - Recusas viram `ApiError` com o `message` da API e o `status`; falha de rede vira `ApiError` com `status = null` e texto próprio.
+- Arquivos (CSV da RN18): `apiDownload` no mesmo cliente devolve o `Blob` sem alterar os bytes, só quando o `Content-Type` é o pedido; recusas continuam lidas como JSON. `shared/lib/download.ts` entrega o arquivo ao navegador e libera a URL temporária (ADR-025).
 - Valores calculados (valor de mercado, multa, classificação…) são **apenas exibidos**. Ordem das listas = ordem da API.
 - Ações de escrita usam `useApiAction` (trava síncrona contra envio duplo, `message` da API preservado). No sucesso, quem chama decide: `refreshAll()` recarrega todas as consultas abertas, sem recarregar a página (ADR-009, ADR-020).
 - Mensagens: sucesso padronizado; erro mostra o `message` da API.

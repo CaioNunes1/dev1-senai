@@ -104,6 +104,17 @@ Notas da Etapa 5.4 (clubes):
 - Tabela larga em 1366 px: medir `scrollWidth` × `clientWidth` do quadro da tabela; preferir largura automática e quebra do nome a esconder coluna.
 - Limpar o `passe_test` com TRUNCATE foi negado pela permissão; para ver o estado vazio real, pedir ao usuário ou rodar o e2e.
 
+Notas da Etapa 6.4 (compra no frontend):
+- Datas digitadas: campos `date` + `time` e `features/market/loyalty-date.ts` (deslocamento fixo −03:00); nunca `toISOString()`/`new Date(texto local)` para montar o que vai à API (ADR-024).
+- Testes com relógio: `vi.useFakeTimers({ toFake: ['Date'] })` + `vi.setSystemTime` (não falsificar `setTimeout`, que o user-event usa).
+- Ações de mercado: só valores da resposta da API no resultado; depois do sucesso, `refreshAll()`; falha de rede em escrita financeira → consultar o estado antes de permitir reenviar.
+
+Notas da Etapa 6.6 (histórico no frontend):
+- Filtros do histórico só por `features/market/transaction-filters.ts` (`transactionQuery` serve à tabela e ao CSV); aba e filtros na URL da página do clube (ADR-025).
+- Arquivos da API: `apiDownload` (`shared/api/http-client.ts`) + `saveFile` (`shared/lib/download.ts`); nunca montar CSV na tela. Testes de download com `mockDownloads` (`src/test/download-mock.ts`).
+- Mock de API de página de clube precisa responder `/clubs/{id}/transactions` (a página carrega o histórico sem filtro).
+- Validação no Chrome headless: o 1º carregamento do Vite em dev leva mais de 2,5 s; comece o cenário com `{ "wait": 3000 }`.
+
 Notas das Etapas 6.1–6.3 (mercado):
 - Histórico e CSV: uma só consulta (`TransactionHistoryService.findTransactions`) e um só pipe de filtros para os dois endpoints; nunca filtrar ou ordenar de novo no CSV (ADR-022).
 - Cabeçalho `text/csv` só depois da consulta dar certo (`@Res({ passthrough: true })`), nunca com `@Header()`: as recusas precisam continuar em JSON.

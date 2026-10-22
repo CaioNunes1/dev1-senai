@@ -265,3 +265,41 @@ CREATE UNIQUE INDEX "contratos_jogador_ativo_key"
 - **Como validar depois de aplicar:** `SELECT indexdef FROM pg_indexes WHERE indexname = 'contratos_jogador_ativo_key'`; rodar `npm run test:e2e`; conferir que `npx prisma migrate diff` não propõe remover o índice.
 - **Recomendação:** aplicar, mas só junto com o tratamento de `P2002` na compra (409) e uma nota no `CLAUDE.md` sobre o `DROP INDEX` que o Prisma pode gerar. Benefício real, custo baixo, sem mudar o contrato da API.
 
+## ADR-024 — Compra no frontend: data de Brasília sem depender do navegador, revisão antes de enviar e recuperação de falha de rede
+
+- **Status:** Aceita (21/10/2026, Etapa 6.4)
+- **Contexto:** a compra (F06) envia `loyalty_until` no formato da RN01 (`AAAA-MM-DDTHH:MM-03:00`), e o avaliador pode estar em qualquer fuso. O prompt pede uma confirmação antes do envio e que uma falha de rede depois do POST não leve a uma compra duplicada.
+- **Decisão:**
+  1. **Datas:** campos `date` e `time` nativos, cujos valores são texto sem fuso. O envio é montado à mão (`${data}T${hora}-03:00`), sem `toISOString()`. A janela (depois de agora e até 1.095 dias) compara instantes com `Date.UTC(...) + 3 h`, e a sugestão de data usa getters UTC do instante deslocado. Os testes rodam com `TZ=UTC` e relógio fixo (`vi.useFakeTimers({ toFake: ['Date'] })`).
+  2. **Revisão no mesmo diálogo:** "Revisar compra" valida e mostra a revisão; só "Confirmar compra" envia. "Voltar" mantém os campos (React Hook Form preserva os valores). Uma recusa (400/404/409) volta ao formulário com o `message` e os dados.
+  3. **Falha de rede depois do envio:** o diálogo consulta o jogador (`GET /players/{id}`) antes de oferecer "Tentar de novo".
+     - Se ele já está num clube, avisa que a compra pode ter sido concluída, recarrega os dados e não deixa reenviar.
+     - Se a consulta falhar, oferece só "Conferir de novo".
+  4. **Valores:** só os da resposta 200 aparecem como resultado. O valor de mercado da lista aparece na revisão marcado como referência, e o custo total é `|cash_change|`.
+  5. **Página do clube → compra:** link com `state` (`buyerClubId`). A lista de jogadores abre em "Livres" (`usePlayerList` aceita filtros iniciais) e o diálogo vem com o clube escolhido. Não há query param novo nem formulário duplicado.
+  6. **Tabela em 1366 px:** com o botão "Comprar", a coluna de ações passou da largura do card. O nome do jogador agora pode quebrar linha, como no elenco (5.4), e nenhuma coluna foi escondida.
+- **Alternativas:**
+  - `datetime-local` + `new Date(valor)`: interpreta no fuso do navegador.
+  - Biblioteca de datas: dependência nova para um deslocamento fixo.
+  - `ConfirmDialog` separado para a revisão: fecharia o formulário e perderia o foco e os dados ao voltar.
+  - Repetir o POST direto depois da falha de rede: pode duplicar a compra se a primeira chegou ao servidor.
+- **Consequências:** o fluxo tem um clique a mais que o M01 do Figma. O Vitest passou a usar `testTimeout` de 15 s, porque o teste de cadastro de jogador (11 campos) passava de 5 s com a suíte maior em paralelo.
+
+
+## ADR-025 — Histórico no frontend: filtros na URL, uma tradução dos filtros, histórico completo reaproveitado e download pelo cliente HTTP
+
+- **Status:** Aceita (21/10/2026, Etapa 6.6)
+- **Contexto:** a aba Histórico (F09–F11) precisa de filtros combinados, totais que acompanhem os filtros, opções de jogador que incluam vendidos e excluídos e um CSV que respeite os mesmos filtros. O cliente HTTP só lia JSON, e o CORS do backend não expõe `Content-Disposition`.
+- **Decisão:**
+  1. **Estado na URL:** aba e filtros ficam em `?tab=history&type=…&player_id=…` (como `?sort=` dos clubes, ADR-021). Trocar de aba não recarrega a página, e abrir outro clube pelo menu começa sem filtros. Valores inválidos na URL são ignorados.
+  2. **Uma tradução dos filtros:** `transactionQuery` (`features/market/transaction-filters.ts`) monta os parâmetros da consulta e da exportação. Os dois tipos marcados equivalem a "todas" e não enviam `type`; a tela não deixa desmarcar o último.
+  3. **Histórico completo reaproveitado:** a página carrega o histórico sem filtro uma vez. Ele dá a contagem da aba, as opções de jogador (nome da transação mais recente; nomes iguais levam o id) e a tabela quando não há filtro. A consulta filtrada só existe com filtro (`useApiQuery` ganhou `enabled`). Tabela e totais vêm sempre da mesma resposta, e respostas de filtros antigos são descartadas pelo `useApiQuery`.
+  4. **Recusas:** 400 ou 404 com filtro ativo aparecem como "O filtro foi recusado" com o `message` (H05), sem tabela nem totais. Outros erros usam o estado de erro do `DataTable` (E05).
+  5. **CSV:** `apiDownload` no mesmo cliente HTTP devolve o `Blob` quando o `Content-Type` é o pedido, e as recusas são lidas como JSON pelo mesmo caminho do `apiRequest`. `saveFile` usa um link temporário e libera a URL. O nome é `historico-clube-{id}.csv` (toast do H02), montado na tela com o id numérico do clube, porque o navegador não lê o `Content-Disposition` (CORS) e assim nenhum nome vindo de fora é usado.
+  6. **Escalação:** aba desabilitada com "Em breve" até a etapa da Liga.
+- **Alternativas:**
+  - Filtros em estado local: perderiam o contexto ao recarregar e continuariam ao trocar de clube pelo menu (mesmo componente montado).
+  - Opções de jogador por `GET /players` ou pelo elenco: não incluiriam vendidos e excluídos.
+  - Gerar o CSV das linhas da tela: proibido pela etapa e duplicaria a RN18.
+  - Expor `Content-Disposition` no CORS do backend: mudaria o backend sem necessidade.
+- **Consequências:** um pedido a mais por página de clube (o histórico sem filtro), que também alimenta a contagem da aba. O arquivo baixado não usa o nome sugerido pelo backend (`transacoes-clube-{id}.csv`).

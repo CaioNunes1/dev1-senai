@@ -83,7 +83,7 @@ Heading/Página mobile (20/28) não foi criado (telas mobile fora do escopo).
 | `/clubs/:clubId` — Elenco | C05 `54:139956`; E04 `54:149172` clube inexistente | caixa, valor do elenco, patrimônio; elenco na ordem da API com contrato [O] | F1 Clubes | 5.4 |
 | `/clubs/:clubId` — Venda | V01 `54:144967` … V05 `75:167030` | confirmação e resultado da venda [O] | F1 Venda | venda (frontend) |
 | `/clubs/:clubId` — Escalação | C06 `60:157006`, C07 `60:158030`, C08 `75:160001`, C10 `75:160523`, C11 `75:163024` | formação + titular por vaga, aviso de incompleta [O]; campo "Em campo" [M] | F1 Liga | liga |
-| `/clubs/:clubId` — Histórico | H01 `54:146719` … H05 `75:159643`; E05 `54:149306` | tabela, filtros, `summary`, CSV [O] | F1 Histórico | histórico |
+| `/clubs/:clubId` — Histórico | H01 `54:146719` … H05 `75:159643`; E05 `54:149306` | tabela, filtros, `summary`, CSV [O] | F1 Histórico | 6.6 |
 | `/matches` | L01 `54:149535` histórico · L02 `54:149914` nova · L03 `60:158515` duelos · L04 `54:150565` incompleta; E06 `54:151232` | jogar, placar + 6 duelos, histórico com filtro [O]; campo com jogadores [M] | F1 Liga | liga |
 | `/standings` | L05 `54:150880` | tabela na ordem da API [O] | F1 Liga | liga |
 | estados | E01 `54:148336` carregando · E02 `54:148765` sem resultados · E03 `54:148977` erro · E07 `75:163564` estados das 6 listas | carregamento, vazio e erro nas 6 listas [O] | F3 | em cada tela |
@@ -145,10 +145,44 @@ Frames consultados: C01 `54:138539` (lista + menu de ordenação), C02 `54:13888
 | Depois de criar | C04: abre a página do clube + toast | fica na lista (ordenação mantida), linha nova destacada na posição devolvida pela API, menu atualizado, toast com caixa, valor do elenco e patrimônio **do 201** | [D] (prompt da etapa) |
 | Cabeçalho do clube | sigla num quadro, "Sigla AGU", "6 de 12 jogadores", "Comprar jogadores" | igual, sem o botão de compra (etapa de compra); volta pela trilha "Clubes" | [O]; compra pendente |
 | Resumo | 4 cards: Caixa, Valor do elenco, Patrimônio, Elenco | os 4, valores da API (nada somado na tela); 1 coluna < 640 px, 2 até 1280 px, 4 acima | [O] |
-| Abas | Elenco · Escalação · Histórico | **só o Elenco** (título + contagem); as abas entram com escalação e histórico | pendente |
+| Abas | Elenco · Escalação · Histórico | implementadas na 6.6 (§3.5) | [O] |
 | Elenco | Jogador, Posição, Overall, Condição, Valor de mercado, Valor de compra, Fim da fidelidade (data + hora), Dias restantes, % de multa, "Vender" | as 9 colunas na ordem da API (RN11); data em Brasília (`Intl`, `America/Sao_Paulo`); `remaining_days` e `penalty_rate` como vieram; multa 0% verde com ✓, 20% vermelha, demais amarela; sem contrato ativo → "—"; nome quebra linha para caber em 1366 px; sem "Vender" (etapa de venda) | [O] RN11/RN15 |
 | Elenco vazio | C04: "Nenhum jogador no elenco" + "Ver jogadores livres" | mensagem "Este clube ainda não possui jogadores."; sem o botão (a lista de jogadores não abre filtrada por URL) | [D] |
 | Clube inexistente | E04 | `GET /clubs/{id}` → 404: `message` da API + "Voltar para clubes"; id fora do formato também vai à API (V8 responde 404) | [O] |
+
+### 3.4 Compra (Etapa 6.4) — como foi implementada
+
+Frames consultados: M01 `54:141194` (confirmação), M02 `54:141877` (enviando), M03 `54:142564` (falha de rede), M04 `54:143254` (recusada por caixa), M05 `54:143944` (concluída), M06 `54:144621` (filtro por clube depois), M07 `75:165726` (elenco cheio), M08 `75:166330` (recompra).
+
+| Elemento | Figma | Implementação | Origem |
+| --- | --- | --- | --- |
+| Botão na linha | "Comprar" (outline, carrinho) só em jogador livre, antes do "⋯" | igual (nome acessível "Comprar {nome}"); o menu "⋯" também tem "Comprar", desabilitado com o motivo para jogador com clube | [O] F06 |
+| Diálogo | M01: jogador com valor de mercado, clube com caixa, data + hora, aviso da taxa, "Confirmar compra" | os mesmos campos; o botão do formulário é "Revisar compra" e abre um **passo de revisão** no mesmo diálogo, com a frase "Confirma a compra de … para …, com fidelidade até … às 10h15?", o valor de mercado como referência e o aviso de que taxa e custo são da API (pedido do prompt da etapa) | [O] + [D] |
+| Data | campos de data e hora; "enviado com o fuso (−03:00)" | `<input type="date">` + `<input type="time">` (só texto, sem fuso); envio montado como `AAAA-MM-DDTHH:MM-03:00`; validação com o deslocamento fixo de Brasília (ADR-024) | [O] RN01 |
+| Enviando | M02: "Comprando…", aviso, botões desabilitados | igual; Esc e X também bloqueados | [O] F3 |
+| Recusa | M04/M07/M08: "Compra recusada" + `message` | volta ao formulário com os dados e o `message` (no `notice`, acima do rodapé, ADR-020) | [O] |
+| Sem conexão | M03: "Sem conexão" + "Tentar de novo" | antes de liberar "Tentar de novo", consulta `GET /players/{id}`: livre → tenta de novo; já num clube → avisa que a compra pode ter sido concluída e atualiza os dados; consulta falhou → "Conferir de novo" (sem novo POST) | [O] + [D] |
+| Resultado | M05: valor, taxa, custo total, fidelidade, contrato, novo caixa, "Ver clube" | igual, com os números do 200; custo total = `cash_change` sem sinal | [O] F06 |
+| Depois | M06: tabela e filtro por clube atualizados | `refreshAll()`: lista, menu, filtros e página do clube recarregam pela API | [O] F07 |
+| Página do clube | "Comprar jogadores" | abre `/players` em "Livres", com aviso "Comprando para o …" e o clube já escolhido no diálogo (estado da navegação, sem query param novo) | [O] |
+
+### 3.5 Histórico do clube (Etapa 6.6) — como foi implementado
+
+Frames consultados: H01 `54:146719` (histórico completo, abas), H02 `54:147270` (só vendas, CSV exportado), H03 `54:147634` (por jogador), H04 `54:147991` (vazio), H05 `75:159643` (filtro recusado), E05 `54:149306` (erro ao carregar), C05 `54:139956` (aba Elenco).
+
+| Elemento | Figma | Implementação | Origem |
+| --- | --- | --- | --- |
+| Abas | Elenco 6 · Escalação · Histórico 10, sublinhado na ativa | `Tabs` (padrão WAI-ARIA: setas, Home, End); contagem do elenco e do histórico sem filtro; aba e filtros na URL (`?tab=history&type=VENDA&player_id=2`), então outro clube pelo menu começa sem filtros; abaixo de 640 px os ícones das abas somem para caberem em 375 px | [O] + [D] |
+| Escalação | aba com conteúdo (C06) | desabilitada (`aria-disabled`), com "Em breve" e o motivo no `title`; nenhum pedido nem tela de mentira (etapa da Liga) | [D] (prompt) |
+| Tabela | Data e hora, Tipo, Jogador, Valor, Taxa ou comissão, Multa, Lucro, Variação do caixa | as 8 colunas na ordem da API; data e hora em Brasília; badge Compra (outline, carrinho) e Venda (secundário, mão com moedas); nome do momento (`player_name`); lucro nulo "–" (leitor de tela: "Não se aplica"); lucro e variação com sinal e cor (verde crédito, vermelho débito) | [O] RN17 |
+| Tipo | duas caixas marcáveis | as duas marcadas = todas (sem `type` na URL da API); a última marcada fica desabilitada | [O] |
+| Jogador | "Jogador: todos" / "Jogador: Meia Lua" | `FilterSelect` com "Jogador" quando vazio; opções tiradas do histórico sem filtro (inclui vendidos e excluídos; nome da transação mais recente; nomes iguais com o id) | [O] |
+| Limpar filtros | link ao lado dos filtros | igual, só com algum filtro ativo; também no vazio filtrado | [O] |
+| Totais | 5 blocos abaixo da tabela | os 5 do `summary` da mesma resposta da tabela; lucro total com sinal e cor; 2 colunas no celular | [O] F10 |
+| Exportar CSV | botão outline no topo do card; toast "CSV baixado" | `GET …/export` com a mesma query da tabela; arquivo `historico-clube-{id}.csv` com os bytes da API; "Exportando…" e trava contra clique duplo; toast com os filtros em texto; recusa em alerta dentro do card, com nova tentativa | [O] F11 |
+| Vazio | H04: "Nenhuma transação ainda" + totais zerados | igual; com filtros, "Nenhuma transação com esses filtros" + "Limpar filtros" e os totais zerados da API | [O] F3 |
+| Filtro recusado | H05: alerta "O filtro foi recusado" + `message` | igual (400 e 404 com filtro ativo); sem tabela e sem totais | [O] |
+| Erro | E05: card de erro + "Tentar de novo" | `DataTable` com o `message`; totais e exportação indisponíveis até carregar | [O] F3 |
 
 ## 4. Componentes
 
@@ -169,13 +203,17 @@ Implementados:
 | `ToastProvider` / `useToast`, `useApiAction` | `shared/hooks/` | avisos de sucesso/erro; ação de escrita com trava síncrona contra envio duplo | 5.3 |
 | `PlayerDialogs`, `CreatePlayerDialog`, `CreatedPlayerDialog`, `EditPlayerDialog`, `ConditionDialog`, `DeletePlayerDialog`, `PlayerActionsMenu`, `PositionPicker`, `PlayerSummary` | `features/players/` | operações de jogador | 5.3 |
 | `buttonClasses` | `shared/components/button-styles.ts` | classes do `Button` também para links com cara de botão ("Ver clube", "Voltar para clubes") | 5.4 |
+| `Select` | `shared/components/` | seleção de formulário com o visual do Input (`<select>` nativo) | 6.4 |
+| `BuyPlayerDialog`, `PurchaseResultDialog`, `buy-player-schema`, `loyalty-date` | `features/market/` | compra (formulário, revisão, recuperação de falha de rede, resultado) e datas de Brasília | 6.4 |
 | `ClubsTable`, `CreateClubDialog`, `ClubMonogram`, `ClubSummaryCards`, `SquadTable` | `features/clubs/` | lista, cadastro, sigla em quadro, resumo e elenco do clube; o elenco reaproveita `ConditionBadge`, `PlayerAvatar` e `DataTable` | 5.4 |
+| `Tabs` (+ `tabIds`) | `shared/components/` | abas acessíveis com contagem e aba desabilitada com motivo | 6.6 |
+| `TransactionHistoryPanel`, `TransactionFiltersBar`, `TransactionsTable`, `TransactionSummaryBar`, `transaction-filters`, `use-transactions` | `features/market/` | aba Histórico: filtros, tabela, totais e exportação | 6.6 |
 
 Previstos, criados quando a primeira tela precisar (evita componente sem uso):
 
 | Componente | Responsabilidade | Primeira tela |
 | --- | --- | --- |
-| `Tabs` | abas do clube (Elenco, Escalação, Histórico); na 5.4 só existe o Elenco | escalação (liga) |
+| — | nenhum por enquanto (o `Tabs` entrou na 6.6) | — |
 
 ## 5. Formatação e datas
 
