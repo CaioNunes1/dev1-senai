@@ -14,5 +14,7 @@ export default defineConfig({
     css: false,
     // Fuso diferente do de Brasília: prova que as datas não dependem do fuso do computador.
     env: { TZ: 'UTC' },
+    // Testes de formulário digitam muitos campos; 5 s (padrão) falhava por lentidão com a suíte em paralelo.
+    testTimeout: 15_000,
   },
 });
