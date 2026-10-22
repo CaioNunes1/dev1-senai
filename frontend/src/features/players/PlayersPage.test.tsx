@@ -142,7 +142,7 @@ describe('PlayersPage — listagem', () => {
       '40,00',
       '37,00',
       'Livre',
-      '',
+      'Comprar',
     ]);
     expect(cells(rows[2])).toEqual([
       'JSJoão SilvaAtacante',

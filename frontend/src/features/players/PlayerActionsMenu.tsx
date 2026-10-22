@@ -1,11 +1,11 @@
-import { Ellipsis, HeartPulse, Pencil, Trash2, type LucideIcon } from 'lucide-react';
+import { Ellipsis, HeartPulse, Pencil, ShoppingCart, Trash2, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../../shared/components/Button';
 import { cx } from '../../shared/lib/cx';
 import type { Player } from './api';
 
-export type PlayerAction = 'edit' | 'condition' | 'delete';
+export type PlayerAction = 'edit' | 'condition' | 'buy' | 'delete';
 
 type MenuItem = {
   action: PlayerAction;
@@ -22,7 +22,7 @@ const GAP_PX = 4;
 type Position = { top: number; left: number; openUp: boolean };
 
 /**
- * Menu de ações da linha (Figma J08): Editar, Alterar condição e Excluir. Abre num portal com
+ * Menu de ações da linha (Figma J08): Editar, Alterar condição, Comprar e Excluir. Abre num portal com
  * posição fixa, para não ser cortado pela rolagem da tabela; setas, Home/End, Esc e Tab
  * funcionam; fecha ao escolher, ao clicar fora ou ao rolar a página.
  */
@@ -42,6 +42,13 @@ export function PlayerActionsMenu({
   const items: MenuItem[] = [
     { action: 'edit', label: 'Editar', icon: Pencil },
     { action: 'condition', label: 'Alterar condição', icon: HeartPulse },
+    {
+      action: 'buy',
+      label: 'Comprar',
+      icon: ShoppingCart,
+      disabled: !isFree,
+      note: isFree ? undefined : 'Só jogador livre pode ser comprado; este já está num clube.',
+    },
     {
       action: 'delete',
       label: 'Excluir',

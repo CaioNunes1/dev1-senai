@@ -1,6 +1,8 @@
 import { ArrowLeft, Plus, SearchX, Users, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router';
 import type { ApiError } from '../../shared/api/http-client';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -15,13 +17,17 @@ import { PlayersTable } from './PlayersTable';
 import { PlayersTableToolbar } from './PlayersTableToolbar';
 import { usePlayerList } from './use-player-list';
 
+/** Estado de navegação vindo do botão “Comprar jogadores” da página do clube. */
+export type PlayersPageState = { buyerClubId?: number };
+
 /**
  * Tela de jogadores (Figma J01–J16 e estados E01–E03): lista por `GET /players` e as ações
  * de cadastro, edição, condição e exclusão. Depois de cada ação gravada, `refreshAll` recarrega
  * as consultas pela API, mantendo busca, filtros, ordenação e página.
  */
 export function PlayersPage() {
-  const list = usePlayerList();
+  const buyerClubId = (useLocation().state as PlayersPageState | null)?.buyerClubId;
+  const list = usePlayerList(buyerClubId === undefined ? {} : { free: true });
   const clubs = useClubList();
   const clubsById = useMemo(
     () => new Map((clubs.data ?? []).map((club) => [club.id, club])),
@@ -39,6 +45,8 @@ export function PlayersPage() {
     }
     refreshAll();
   };
+
+  const buyerClub = buyerClubId === undefined ? undefined : clubsById.get(buyerClubId);
 
   const handleRefused = (refusal: ApiError) => {
     if (refusal.status === 404 || refusal.status === 409) {
@@ -59,6 +67,11 @@ export function PlayersPage() {
           </Button>
         }
       />
+      {buyerClub && (
+        <Alert variant="info" title={`Comprando para o ${buyerClub.name}`}>
+          A lista abriu nos jogadores livres. Em “Comprar”, o {buyerClub.name} já vem escolhido.
+        </Alert>
+      )}
       <PlayersFilters
         filters={list.filters}
         onChange={list.updateFilters}
@@ -117,8 +130,13 @@ export function PlayersPage() {
           setHighlightedId(player.id);
           refreshAll();
         }}
+        onPurchased={(result) => {
+          setHighlightedId(result.player_id);
+          refreshAll();
+        }}
         onPlayerDeleted={handleDeleted}
         onRefused={handleRefused}
+        buyerClubId={buyerClub?.id}
       />
     </>
   );

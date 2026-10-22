@@ -19,9 +19,13 @@ const SEARCH_DEBOUNCE_MS = 300;
  * trabalho da API; aqui só se monta a consulta. Qualquer mudança de filtro ou de busca volta
  * para a página 1: a página escolhida vale só enquanto os filtros não mudam (ajuste de estado
  * durante a renderização, sem efeito; voltar aos mesmos filtros depois não restaura a página).
+ * `initialChanges` vale só na montagem (ex.: abrir já em "Livres" ao vir da página do clube).
  */
-export function usePlayerList() {
-  const [filters, setFilters] = useState<PlayerFilters>(INITIAL_FILTERS);
+export function usePlayerList(initialChanges: Partial<PlayerFilters> = {}) {
+  const [filters, setFilters] = useState<PlayerFilters>(() => ({
+    ...INITIAL_FILTERS,
+    ...initialChanges,
+  }));
   const [searchText, setSearchText] = useState('');
   const debouncedSearch = useDebouncedValue(searchText, SEARCH_DEBOUNCE_MS);
 

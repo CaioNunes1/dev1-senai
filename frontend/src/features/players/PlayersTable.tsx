@@ -1,8 +1,10 @@
+import { ShoppingCart } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { clubPath } from '../../app/layout/navigation';
 import type { Club } from '../clubs/api';
 import { Badge } from '../../shared/components/Badge';
+import { Button } from '../../shared/components/Button';
 import { DataTable, type Column } from '../../shared/components/DataTable';
 import type { ApiError } from '../../shared/api/http-client';
 import { formatMoney } from '../../shared/lib/format';
@@ -57,7 +59,7 @@ export function PlayersTable({
         <div className="flex items-center gap-3">
           <PlayerAvatar id={player.id} name={player.name} />
           <div className="flex flex-col">
-            <span className="font-medium text-foreground">{player.name}</span>
+            <span className="font-medium whitespace-normal text-foreground">{player.name}</span>
             <span className="text-xs text-muted-foreground">
               {POSITION_LABELS[player.position]}
             </span>
@@ -135,8 +137,23 @@ export function PlayersTable({
       header: 'Ações',
       headerHidden: true,
       align: 'right',
-      widthClass: 'w-14',
-      cell: (player) => <PlayerActionsMenu player={player} onAction={onAction} />,
+      widthClass: 'w-36',
+      cell: (player) => (
+        <div className="flex items-center justify-end gap-2">
+          {player.club_id === null && (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={`Comprar ${player.name}`}
+              onClick={() => onAction('buy', player)}
+            >
+              <ShoppingCart aria-hidden="true" />
+              Comprar
+            </Button>
+          )}
+          <PlayerActionsMenu player={player} onAction={onAction} />
+        </div>
+      ),
     },
   ];
 
