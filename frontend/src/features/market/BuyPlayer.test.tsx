@@ -439,6 +439,7 @@ describe('confirmação, envio e resultado', () => {
       '02/03/202710:15',
       '120',
       '10%',
+      'Vender',
     ]);
   });
 });

@@ -111,6 +111,9 @@ function mockClubApi(detail: (url: URL) => Response | Promise<Response>) {
     if (url.pathname.endsWith('/transactions')) {
       return jsonResponse(EMPTY_HISTORY);
     }
+    if (url.pathname.endsWith('/lineup')) {
+      return jsonResponse({ club_id: 2, formation: null, complete: false, players: [] });
+    }
     if (url.pathname.includes('/clubs/')) {
       return detail(url);
     }
@@ -190,6 +193,7 @@ describe('ClubDetailPage', () => {
       'Fim da fidelidade',
       'Dias restantes',
       '% de multa',
+      'Ações',
     ]);
     expect(cellsOf('Felipe Moura')).toEqual([
       'FMFelipe Moura',
@@ -201,6 +205,7 @@ describe('ClubDetailPage', () => {
       '04/04/202715:45',
       '144',
       '10%',
+      'Vender',
     ]);
     expect(cellsOf('João Silva').slice(4)).toEqual([
       '1.744,14',
@@ -208,6 +213,7 @@ describe('ClubDetailPage', () => {
       '04/11/202917:10',
       '1.089',
       '20%',
+      'Vender',
     ]);
     expect(cellsOf('Lucas Ferraz').slice(3)).toEqual([
       'Doente',
@@ -216,6 +222,7 @@ describe('ClubDetailPage', () => {
       '07/11/202609:00',
       '0',
       '0%',
+      'Vender',
     ]);
     const loyalty = squadTable().getByText('04/04/2027').closest('time');
     expect(loyalty).toHaveAttribute('dateTime', '2027-04-04T15:45:00-03:00');
@@ -241,12 +248,13 @@ describe('ClubDetailPage', () => {
     renderApp('/clubs/2');
     await screen.findByRole('table', { name: 'Elenco' });
 
-    expect(cellsOf('Bruno Tavares').slice(6)).toEqual(['10/12/202623:30', '54', '5%']);
+    expect(cellsOf('Bruno Tavares').slice(6)).toEqual(['10/12/202623:30', '54', '5%', 'Vender']);
     expect(cellsOf('Diego Ramos').slice(5)).toEqual([
       '—Sem contrato ativo',
       '—Sem contrato ativo',
       '—Sem contrato ativo',
       '—Sem contrato ativo',
+      'Vender',
     ]);
   });
 

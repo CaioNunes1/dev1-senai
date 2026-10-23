@@ -140,6 +140,15 @@ function fakeApi(override?: Override) {
         ? jsonResponse({ ...club, players: club.id === 1 ? SQUAD : [] })
         : jsonResponse({ message: 'Clube não encontrado.' }, 404);
     }
+    const lineupMatch = /^\/clubs\/(\d+)\/lineup$/.exec(path);
+    if (lineupMatch) {
+      return jsonResponse({
+        club_id: Number(lineupMatch[1]),
+        formation: null,
+        complete: false,
+        players: [],
+      });
+    }
     const historyMatch = /^\/clubs\/(\d+)\/transactions(\/export)?$/.exec(path);
     if (historyMatch) {
       const playerId = url.searchParams.get('player_id');
@@ -228,7 +237,7 @@ afterEach(() => {
 });
 
 describe('abas da página do clube', () => {
-  it('abre no Elenco, com contagens, Escalação desabilitada e o cabeçalho do clube', async () => {
+  it('abre no Elenco, com contagens e as três abas; a Escalação abre o próprio painel', async () => {
     const { fetchMock } = fakeApi();
     const user = userEvent.setup();
     renderApp('/clubs/1');
@@ -238,20 +247,17 @@ describe('abas da página do clube', () => {
     await waitFor(() =>
       expect(tabs.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
         'Elenco1',
-        'EscalaçãoEm breve',
+        'Escalação',
         'Histórico6',
       ]),
     );
     expect(tabs.getByRole('tab', { name: /^Elenco/ })).toHaveAttribute('aria-selected', 'true');
-    const lineup = tabs.getByRole('tab', { name: /^Escalação/ });
-    expect(lineup).toHaveAttribute('aria-disabled', 'true');
-    expect(lineup).toHaveAttribute('title', 'A escalação chega com a etapa da Liga.');
 
-    await user.click(lineup);
-    expect(tabs.getByRole('tab', { name: /^Elenco/ })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tabpanel', { name: /^Elenco/ })).toBeInTheDocument();
+    await user.click(tabs.getByRole('tab', { name: /^Escalação/ }));
+    expect(screen.getByRole('tabpanel', { name: /^Escalação/ })).toBeInTheDocument();
+    expect(await screen.findByText('O Águias FC ainda não tem escalação')).toBeInTheDocument();
     expect(fetchMock.mock.calls.filter(([input]) => urlOf(input).includes('lineup'))).toHaveLength(
-      0,
+      1,
     );
     expect(searches(fetchMock)).toEqual(['']);
   });
@@ -278,7 +284,7 @@ describe('abas da página do clube', () => {
     expect(searches(fetchMock)).toEqual(['']);
   });
 
-  it('teclado: setas, Home e End trocam de aba e pulam a Escalação', async () => {
+  it('teclado: setas, Home e End trocam de aba', async () => {
     fakeApi();
     const user = userEvent.setup();
     renderApp('/clubs/1');
@@ -290,6 +296,8 @@ describe('abas da página do clube', () => {
     }
     expect(screen.getByRole('tab', { name: /^Elenco/ })).toHaveFocus();
 
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: /^Escalação/ })).toHaveFocus();
     await user.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: /^Histórico/ })).toHaveFocus();
     expect(screen.getByRole('tab', { name: /^Histórico/ })).toHaveAttribute(

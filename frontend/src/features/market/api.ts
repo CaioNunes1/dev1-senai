@@ -72,3 +72,19 @@ export function exportClubTransactions(clubId: number, filters: TransactionFilte
     query: transactionQuery(filters),
   });
 }
+
+/** Resposta 200 da venda (README › 2.3.2): a transação VENDA, o contrato encerrado e o novo caixa. */
+export type SaleResult = Omit<Transaction, 'type' | 'profit'> & {
+  type: 'VENDA';
+  profit: number;
+  purchase_value: number;
+  remaining_days: number;
+  penalty_rate: number;
+  contract_status: 'ENCERRADO' | 'RESCINDIDO';
+  club_cash: number;
+};
+
+/** RN15–RN16: a venda é sempre pelo clube atual do jogador, sem corpo. */
+export function sellPlayer(playerId: number): Promise<SaleResult> {
+  return apiRequest<SaleResult>(`/players/${playerId}/sell`, { method: 'POST' });
+}

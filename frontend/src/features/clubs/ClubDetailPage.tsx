@@ -9,6 +9,7 @@ import {
   Shirt,
   ShoppingCart,
 } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ROUTES } from '../../app/layout/navigation';
 import { Badge } from '../../shared/components/Badge';
@@ -18,7 +19,14 @@ import { Card } from '../../shared/components/Card';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { tabIds } from '../../shared/components/tab-ids';
 import { Tabs } from '../../shared/components/Tabs';
+import { useDataRefresh } from '../../shared/hooks/data-refresh';
 import type { ApiQuery } from '../../shared/hooks/use-api-query';
+import { useApiQuery } from '../../shared/hooks/use-api-query';
+import { getLineup } from '../league/api';
+import { LineupPanel } from '../league/LineupPanel';
+import type { SaleResult } from '../market/api';
+import { SaleResultDialog } from '../market/SaleResultDialog';
+import { SellPlayerDialog } from '../market/SellPlayerDialog';
 import {
   readTransactionFilters,
   writeTransactionFilters,
@@ -27,33 +35,60 @@ import {
 import { TransactionHistoryPanel } from '../market/TransactionHistoryPanel';
 import { useClubTransactions } from '../market/use-transactions';
 import type { PlayersPageState } from '../players/PlayersPage';
-import type { ClubDetail } from './api';
+import type { ClubDetail, SquadPlayer } from './api';
 import { ClubMonogram } from './ClubMonogram';
 import { ClubSummaryCards } from './ClubSummaryCards';
 import { MAX_SQUAD_SIZE } from './club-labels';
 import { SquadTable } from './SquadTable';
 import { useClub } from './use-clubs';
 
-/** Abas da página; a Escalação aparece desabilitada até a etapa da Liga. */
+/** Abas da página: Elenco, Escalação (RN19) e Histórico (RN17). */
 type ClubTab = 'squad' | 'lineup' | 'history';
 
 const TAB_PARAM = 'tab';
 const HISTORY_TAB: ClubTab = 'history';
+const LINEUP_TAB: ClubTab = 'lineup';
 
-/** Aba na URL (`?tab=history`); sem ela ou com valor desconhecido, o Elenco. */
+/** Aba na URL (`?tab=history`, `?tab=lineup`); sem ela ou com valor desconhecido, o Elenco. */
 function readTab(params: URLSearchParams): ClubTab {
-  return params.get(TAB_PARAM) === HISTORY_TAB ? HISTORY_TAB : 'squad';
+  const tab = params.get(TAB_PARAM);
+  return tab === HISTORY_TAB || tab === LINEUP_TAB ? tab : 'squad';
 }
 
 /**
  * Página do clube (Figma C04/C05, H01–H05, E04 e E05): `GET /clubs/{id}` com o resumo
  * financeiro e o elenco, tudo como a API devolve, e a aba Histórico com as transações.
  * Funciona por clique na lista, no menu ou pela URL direta. "Comprar jogadores" abre a lista
- * de jogadores livres com este clube já escolhido na compra.
+ * de jogadores livres com este clube já escolhido na compra. O resultado de uma venda fica
+ * neste nível: continua visível mesmo se a recarga do clube depois da venda falhar.
  */
 export function ClubDetailPage() {
   const { clubId = '' } = useParams();
   const club = useClub(clubId);
+  const [, setSearchParams] = useSearchParams();
+  const [sale, setSale] = useState<{ result: SaleResult; clubName: string }>();
+
+  return (
+    <>
+      <ClubBody club={club} onSold={(result, clubName) => setSale({ result, clubName })} />
+      {sale && (
+        <SaleResultDialog
+          result={sale.result}
+          clubName={sale.clubName}
+          onClose={() => setSale(undefined)}
+          onShowHistory={() => {
+            setSale(undefined);
+            setSearchParams({ [TAB_PARAM]: HISTORY_TAB }, { replace: true });
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+type OnSold = (result: SaleResult, clubName: string) => void;
+
+function ClubBody({ club, onSold }: { club: ApiQuery<ClubDetail>; onSold: OnSold }): ReactNode {
   const { data, error } = club;
 
   if (error?.status === 404) {
@@ -101,7 +136,7 @@ export function ClubDetailPage() {
     );
   }
 
-  return <ClubContent club={club} data={data} />;
+  return <ClubContent club={club} data={data} onSold={onSold} />;
 }
 
 /**
@@ -109,19 +144,30 @@ export function ClubDetailPage() {
  * recarrega a página, e abrir outro clube pelo menu começa sem filtros. O histórico sem filtro
  * é carregado aqui uma vez: dá a contagem da aba, os jogadores do filtro e a tabela sem filtro.
  */
-function ClubContent({ club, data }: { club: ApiQuery<ClubDetail>; data: ClubDetail }) {
+function ClubContent({
+  club,
+  data,
+  onSold,
+}: {
+  club: ApiQuery<ClubDetail>;
+  data: ClubDetail;
+  onSold: OnSold;
+}) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { refreshAll } = useDataRefresh();
+  const [selling, setSelling] = useState<SquadPlayer>();
   const tab = readTab(searchParams);
   const filters = readTransactionFilters(searchParams);
   const allHistory = useClubTransactions(data.id);
+  const lineup = useApiQuery(`lineup:${data.id}`, (signal) => getLineup(data.id, signal));
   const ids = tabIds('club', tab);
 
   function selectTab(next: ClubTab) {
     const params = new URLSearchParams(searchParams);
-    if (next === HISTORY_TAB) {
-      params.set(TAB_PARAM, next);
-    } else {
+    if (next === 'squad') {
       params.delete(TAB_PARAM);
+    } else {
+      params.set(TAB_PARAM, next);
     }
     setSearchParams(params, { replace: true });
   }
@@ -162,12 +208,7 @@ function ClubContent({ club, data }: { club: ApiQuery<ClubDetail>; data: ClubDet
           onChange={selectTab}
           items={[
             { key: 'squad', label: 'Elenco', icon: Shirt, count: data.players.length },
-            {
-              key: 'lineup',
-              label: 'Escalação',
-              icon: ClipboardList,
-              disabledReason: 'A escalação chega com a etapa da Liga.',
-            },
+            { key: LINEUP_TAB, label: 'Escalação', icon: ClipboardList },
             {
               key: HISTORY_TAB,
               label: 'Histórico',
@@ -182,14 +223,16 @@ function ClubContent({ club, data }: { club: ApiQuery<ClubDetail>; data: ClubDet
           aria-labelledby={ids.tab}
           className="flex flex-col gap-4"
         >
-          {tab === HISTORY_TAB ? (
+          {tab === LINEUP_TAB && <LineupPanel club={data} lineup={lineup} />}
+          {tab === HISTORY_TAB && (
             <TransactionHistoryPanel
               clubId={data.id}
               allHistory={allHistory}
               filters={filters}
               onFiltersChange={changeFilters}
             />
-          ) : (
+          )}
+          {tab === 'squad' && (
             <>
               <Card className="overflow-hidden">
                 <div className="flex flex-col gap-0.5 border-b border-border px-4 py-3">
@@ -199,7 +242,7 @@ function ClubContent({ club, data }: { club: ApiQuery<ClubDetail>; data: ClubDet
                     devolve.
                   </p>
                 </div>
-                <SquadTable club={club} />
+                <SquadTable club={club} onSell={setSelling} />
               </Card>
               <p className="text-xs text-muted-foreground">
                 Valores em moedas. Valor de mercado, dias restantes e % de multa são calculados pela
@@ -209,6 +252,21 @@ function ClubContent({ club, data }: { club: ApiQuery<ClubDetail>; data: ClubDet
           )}
         </div>
       </div>
+      {selling && (
+        <SellPlayerDialog
+          player={selling}
+          clubId={data.id}
+          clubName={data.name}
+          isStarter={lineup.data?.players.some((player) => player.id === selling.id) ?? false}
+          onClose={() => setSelling(undefined)}
+          onSold={(result) => {
+            setSelling(undefined);
+            onSold(result, data.name);
+            refreshAll();
+          }}
+          onRefused={refreshAll}
+        />
+      )}
     </>
   );
 }

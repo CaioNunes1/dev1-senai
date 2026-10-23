@@ -1,6 +1,7 @@
-import { Check, Shirt } from 'lucide-react';
+import { Check, HandCoins, Shirt } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge, type BadgeVariant } from '../../shared/components/Badge';
+import { Button } from '../../shared/components/Button';
 import { DataTable, type Column } from '../../shared/components/DataTable';
 import { EmptyState } from '../../shared/components/EmptyState';
 import type { ApiQuery } from '../../shared/hooks/use-api-query';
@@ -121,13 +122,40 @@ const COLUMNS: Column<SquadPlayer>[] = [
 /**
  * Elenco do clube (Figma C05): jogadores na ordem da API (RN11: GOL → ATA, depois nome e id)
  * e o contrato ativo de cada um, com fim da fidelidade, dias restantes e % de multa
- * calculados pela API no momento da consulta (RN15).
+ * calculados pela API no momento da consulta (RN15), e o botão "Vender" de cada jogador.
  */
-export function SquadTable({ club }: { club: ApiQuery<ClubDetail> }) {
+export function SquadTable({
+  club,
+  onSell,
+}: {
+  club: ApiQuery<ClubDetail>;
+  /** Abre a confirmação da venda (Figma V01). */
+  onSell: (player: SquadPlayer) => void;
+}) {
+  const columns: Column<SquadPlayer>[] = [
+    ...COLUMNS,
+    {
+      key: 'actions',
+      header: 'Ações',
+      headerHidden: true,
+      align: 'right',
+      cell: (player) => (
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={`Vender ${player.name}`}
+          onClick={() => onSell(player)}
+        >
+          <HandCoins aria-hidden="true" />
+          Vender
+        </Button>
+      ),
+    },
+  ];
   return (
     <DataTable
       caption="Elenco"
-      columns={COLUMNS}
+      columns={columns}
       rows={club.data?.players}
       rowKey={(player) => player.id}
       isLoading={club.isLoading}

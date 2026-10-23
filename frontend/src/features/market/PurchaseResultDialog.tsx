@@ -7,6 +7,7 @@ import { buttonClasses } from '../../shared/components/button-styles';
 import { Dialog } from '../../shared/components/Dialog';
 import { formatBrasiliaDateTime, formatMoney } from '../../shared/lib/format';
 import type { PurchaseResult } from './api';
+import { ResultRow } from './ResultRow';
 
 type PurchaseResultDialogProps = {
   result: PurchaseResult;
@@ -86,23 +87,5 @@ export function PurchaseResultDialog({ result, clubName, onClose }: PurchaseResu
         />
       </dl>
     </Dialog>
-  );
-}
-
-type ResultRowProps = { label: string; detail?: string; value: string; highlight?: boolean };
-
-function ResultRow({ label, detail, value, highlight = false }: ResultRowProps) {
-  return (
-    <div
-      className={
-        highlight ? 'flex items-center gap-3 bg-muted-subtle p-3' : 'flex items-center gap-3 p-3'
-      }
-    >
-      <dt className="flex flex-1 flex-col">
-        <span className={highlight ? 'font-semibold' : 'text-muted-foreground'}>{label}</span>
-        {detail && <span className="text-xs text-muted-foreground">{detail}</span>}
-      </dt>
-      <dd className={highlight ? 'text-heading-card' : 'font-medium'}>{value}</dd>
-    </div>
   );
 }
