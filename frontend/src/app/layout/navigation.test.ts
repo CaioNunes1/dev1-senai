@@ -24,4 +24,12 @@ describe('breadcrumbFor', () => {
   it('usa "Clube {id}" quando o clube não está na lista', () => {
     expect(breadcrumbFor('/clubs/99', clubNames).at(-1)).toEqual({ label: 'Clube 99' });
   });
+
+  it('partida: Liga › Partidas (link) › Partida {id}', () => {
+    expect(breadcrumbFor('/matches/7', clubNames)).toEqual([
+      { label: 'Liga' },
+      { label: 'Partidas', to: '/matches' },
+      { label: 'Partida 7' },
+    ]);
+  });
 });

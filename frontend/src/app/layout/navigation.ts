@@ -1,16 +1,21 @@
 import { ListOrdered, Shield, Swords, Users, type LucideIcon } from 'lucide-react';
-import { matchPath } from 'react-router';
+import { matchPath as matchRoute } from 'react-router';
 
 export const ROUTES = {
   players: '/players',
   clubs: '/clubs',
   clubDetail: '/clubs/:clubId',
   matches: '/matches',
+  matchDetail: '/matches/:matchId',
   standings: '/standings',
 } as const;
 
 export function clubPath(clubId: number): string {
   return `${ROUTES.clubs}/${clubId}`;
+}
+
+export function matchDetailPath(matchId: number): string {
+  return `${ROUTES.matches}/${matchId}`;
 }
 
 type NavItem = { label: string; path: string; icon: LucideIcon };
@@ -37,11 +42,11 @@ export const NAV_GROUPS: NavGroup[] = [
 export type Crumb = { label: string; to?: string };
 
 /**
- * Trilha do topo: grupo › página (› clube). O nome do clube vem da lista já carregada
+ * Trilha do topo: grupo › página (› clube ou partida). O nome do clube vem da lista já carregada
  * pelo menu; sem ele (clube inexistente ou lista carregando), mostra "Clube {id}".
  */
 export function breadcrumbFor(pathname: string, clubNameById: Map<number, string>): Crumb[] {
-  const clubMatch = matchPath(ROUTES.clubDetail, pathname);
+  const clubMatch = matchRoute(ROUTES.clubDetail, pathname);
   if (clubMatch) {
     const clubId = Number(clubMatch.params.clubId);
     return [
@@ -50,8 +55,16 @@ export function breadcrumbFor(pathname: string, clubNameById: Map<number, string
       { label: clubNameById.get(clubId) ?? `Clube ${clubMatch.params.clubId}` },
     ];
   }
+  const gameMatch = matchRoute(ROUTES.matchDetail, pathname);
+  if (gameMatch) {
+    return [
+      { label: 'Liga' },
+      { label: 'Partidas', to: ROUTES.matches },
+      { label: `Partida ${gameMatch.params.matchId}` },
+    ];
+  }
   for (const group of NAV_GROUPS) {
-    const item = group.items.find(({ path }) => matchPath(path, pathname));
+    const item = group.items.find(({ path }) => matchRoute(path, pathname));
     if (item) {
       return [{ label: group.label }, { label: item.label }];
     }

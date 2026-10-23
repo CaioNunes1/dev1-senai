@@ -28,6 +28,9 @@ function mockClubsApi(...clubsResponses: Array<() => Response>) {
     if (club) {
       return jsonResponse({ ...club, players: [] });
     }
+    if (url.pathname.endsWith('/standings') || url.pathname.endsWith('/matches')) {
+      return jsonResponse([]);
+    }
     return jsonResponse(EMPTY_PAGE);
   });
 }

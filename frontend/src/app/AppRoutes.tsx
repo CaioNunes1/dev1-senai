@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { ClubDetailPage } from '../features/clubs/ClubDetailPage';
 import { ClubsPage } from '../features/clubs/ClubsPage';
+import { MatchDetailPage } from '../features/league/MatchDetailPage';
 import { MatchesPage } from '../features/league/MatchesPage';
 import { StandingsPage } from '../features/league/StandingsPage';
 import { PlayersPage } from '../features/players/PlayersPage';
@@ -17,6 +18,7 @@ export function AppRoutes() {
         <Route path={ROUTES.clubs} element={<ClubsPage />} />
         <Route path={ROUTES.clubDetail} element={<ClubDetailPage />} />
         <Route path={ROUTES.matches} element={<MatchesPage />} />
+        <Route path={ROUTES.matchDetail} element={<MatchDetailPage />} />
         <Route path={ROUTES.standings} element={<StandingsPage />} />
         <Route path="*" element={<Navigate to={ROUTES.players} replace />} />
       </Route>
