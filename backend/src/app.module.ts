@@ -4,6 +4,7 @@ import { ClubsModule } from './clubs/clubs.module';
 import { ClockModule } from './common/clock/clock.module';
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware';
 import { validateEnvironment } from './config/environment';
+import { LeagueModule } from './league/league.module';
 import { MarketModule } from './market/market.module';
 import { PlayersModule } from './players/players.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -16,6 +17,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PlayersModule,
     ClubsModule,
     MarketModule,
+    LeagueModule,
   ],
 })
 export class AppModule implements NestModule {
