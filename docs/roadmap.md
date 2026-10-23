@@ -157,8 +157,19 @@ As telas de clubes (frontend) continuam previstas aqui, em commits separados.
 | 6.2 | Venda no backend (RN15–RN16) | ✅ implementada em 18/10 (Etapa 10), revisada em 19/10 com testes de concorrência, rollback e consultas |
 | 6.3 | Histórico, filtros, `summary` e CSV (RN17–RN18) | ✅ 20/10/2026 (backend; a aba Histórico fica para as telas) |
 | 6.4 | Tela de compra (F06, F07) | ✅ 21/10/2026 |
-| 6.5 | Tela de venda (F08) | pendente (Etapa 11) |
+| 6.5 | Tela de venda (F08) | ✅ 22/10/2026 |
 | 6.6 | Aba Histórico: filtros, `summary` e CSV na tela (F09–F11) | ✅ 21/10/2026 |
+
+## Etapa 7 do usuário — Liga (sprint final de 22/10/2026)
+
+| Subetapa | Escopo | Situação |
+| --- | --- | --- |
+| 7.1 | Escalação no backend (RN19, B20) | ✅ 22/10/2026 |
+| 7.2 | Aba Escalação (F12) | ✅ 22/10/2026 |
+| 7.3 | Partidas, histórico e classificação no backend (RN20–RN21, B21, B22) | ✅ 22/10/2026 |
+| 7.4 | Telas de partidas e classificação (F13, F14) | ✅ 22/10/2026 |
+
+- **Commits sugeridos (sprint final):** `feat(frontend): vende jogadores pela página do clube com confirmação e resultado da api` · `feat(backend): escala o clube com formação e titulares, joga partidas por duelos e calcula a classificação` · `test(backend): cobre escalação, partidas e classificação com os exemplos oficiais` · `feat(frontend): adiciona a aba escalação na página do clube` · `feat(frontend): telas de partidas, duelos e classificação` · `docs: readme de entrega, adr-026 e progresso da liga`.
 
 - **Commit sugerido (6.1):** `test(backend): cobre compras simultâneas, rollback e consultas depois da compra`.
 - **Commits sugeridos (6.6):** `feat(frontend): adiciona abas acessíveis, download de arquivo e consulta opcional` · `feat(frontend): mostra o histórico do clube com filtros, resumo da api e exportação csv` · `docs: registra o histórico no frontend e a ADR-025`.

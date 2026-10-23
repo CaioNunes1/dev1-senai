@@ -109,6 +109,11 @@ Notas da Etapa 6.4 (compra no frontend):
 - Testes com relógio: `vi.useFakeTimers({ toFake: ['Date'] })` + `vi.setSystemTime` (não falsificar `setTimeout`, que o user-event usa).
 - Ações de mercado: só valores da resposta da API no resultado; depois do sucesso, `refreshAll()`; falha de rede em escrita financeira → consultar o estado antes de permitir reenviar.
 
+Notas da sprint final (venda e Liga, 22/10):
+- Liga no backend: regras só em `league/domain/` (`formation`, `match-engine`, `standings`); partida trava os dois clubes; escalação trava jogadores (por id) e depois o clube (ADR-026).
+- Mocks de página de clube nos testes precisam responder `/clubs/{id}/lineup` e `/clubs/{id}/transactions`.
+- Nome de jogador nos testes e2e: 2 palavras, sem dígitos; `potential` ≥ maior atributo.
+
 Notas da Etapa 6.6 (histórico no frontend):
 - Filtros do histórico só por `features/market/transaction-filters.ts` (`transactionQuery` serve à tabela e ao CSV); aba e filtros na URL da página do clube (ADR-025).
 - Arquivos da API: `apiDownload` (`shared/api/http-client.ts`) + `saveFile` (`shared/lib/download.ts`); nunca montar CSV na tela. Testes de download com `mockDownloads` (`src/test/download-mock.ts`).

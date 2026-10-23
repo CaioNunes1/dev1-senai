@@ -59,9 +59,12 @@ backend/src/
 │   ├── dto/transaction-filters.ts  (type e player_id, um pipe para os dois endpoints do histórico)
 │   ├── market.controller.ts (POST /players/{id}/buy e /sell)  market.service.ts  transaction.mapper.ts
 │   ├── transactions.controller.ts (GET /clubs/{id}/transactions e /export)  transaction-history.service.ts
-├── league/                     lineup-membership.ts (saída da escalação, usada na venda e na condição DOENTE); RN19–RN21 pendentes
-├── league/                     RN19–RN21 (escalação, partidas, classificação)
-│   ├── domain/                 formation.ts, match-engine.ts, standings.ts
+├── league/                     RN19–RN21 (✅ 22/10)
+│   ├── domain/                 formation.ts (4 formações, setores), match-engine.ts (6 duelos, 15% do MAL_CONDICIONADO,
+│   │                           placar), standings.ts (pontos e desempates)
+│   ├── dto/                    league-requests.ts (LineupDto, PlayMatchDto, MatchListQueryPipe), league-responses.ts
+│   ├── lineup.service.ts  matches.service.ts  league.mapper.ts  league.controllers.ts  league.module.ts
+│   ├── lineup-membership.ts    saída da escalação, usada na venda e na condição DOENTE
 ```
 
 Dependências entre módulos (sem ciclos):
@@ -128,7 +131,7 @@ frontend/
     │   ├── api/http-client.ts   ✅ apiRequest, ApiError, URL base de VITE_API_URL + /api/v1
     │   ├── hooks/               ✅ useApiQuery, useApiAction, DataRefreshProvider/useDataRefresh, ToastProvider/useToast, useDebouncedValue
     │   ├── components/          ✅ Button (+ button-styles), Card, PageHeader, DataTable, EmptyState, Badge, Input, FilterSelect,
-    │   │                           FormField, Alert, Dialog, ConfirmDialog
+    │   │                           FormField, Alert, Dialog, ConfirmDialog, Select, Tabs (+ tab-ids)
     │   └── lib/                 ✅ cx, format (moeda, inteiro, %, data/hora em Brasília), text (regras V4 e removeAccents do backend)
     ├── features/
     │   ├── players/             ✅ api.ts, usePlayerList, player-filters (funções puras), PlayersPage, PlayersFilters, RangeFilter,
@@ -138,11 +141,13 @@ frontend/
     │   ├── clubs/               ✅ api.ts (GET /clubs, GET /clubs/{id}, POST /clubs), useClubs/useClub, ClubsContext/useClubList,
     │   │                           club-schemas (Zod), club-labels, ClubsPage, ClubsTable, CreateClubDialog, ClubMonogram,
     │   │                           ClubDetailPage, ClubSummaryCards, SquadTable
-    │   ├── market/              ✅ api.ts (compra, histórico, CSV), loyalty-date (RN01), buy-player-schema (Zod),
+    │   ├── market/              ✅ api.ts (compra, venda, histórico, CSV), loyalty-date (RN01), buy-player-schema (Zod),
     │   │                           BuyPlayerDialog, PurchaseResultDialog, transaction-filters (única tradução
     │   │                           dos filtros para a API e a URL), use-transactions, TransactionHistoryPanel,
-    │   │                           TransactionFiltersBar, TransactionsTable, TransactionSummaryBar · venda
-    │   └── league/              ✅ MatchesPage e StandingsPage (provisórias) · escalação, partidas
+    │   │                           TransactionFiltersBar, TransactionsTable, TransactionSummaryBar, SellPlayerDialog,
+    │   │                           SaleResultDialog, ResultRow
+    │   └── league/              ✅ api.ts (escalação, partidas, classificação), lineup-slots (vagas por formação), LineupPanel,
+    │                               MatchesPage, NewMatchDialog, MatchDetailPage, StandingsPage
     ├── styles/index.css         ✅ Tailwind v4 + tokens do Figma (@theme)
     └── test/                    ✅ setup do Vitest, mock de fetch, downloads falsos (download-mock)
 ```

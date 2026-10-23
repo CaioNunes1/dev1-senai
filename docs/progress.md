@@ -2,18 +2,19 @@
 
 ## Estado atual
 
-- **Etapas concluídas:** 1 — Fundação do backend; 3.1 — Domínio de jogadores (15/10/2026); 2 — Modelo de dados e migrations; 4.1 — Cadastro de clubes (17/10/2026); 3.2, 3.3 e 3.4 — API de jogadores completa; 4.2 — consulta e listagem de clubes; compra; 4.3 — elenco com contratos; venda; **5.1 — Fundação do frontend**; **5.2 — Listagem de jogadores**; **5.3 — Operações de jogadores**; **5.4 — Clubes** (18/10/2026).
-- **Backend:** 11 das 19 rotas do enunciado prontas. Faltam histórico e CSV (RN17–RN18), escalação (RN19), partidas e classificação (RN20–RN21).
-- **Frontend:** layout do Figma, rotas, cliente HTTP, menu de clubes e **tela de jogadores completa**: lista (busca, filtros, ordenação, paginação, estados) e cadastro, edição, condição e exclusão. **Clubes completos**: lista com as 3 ordenações da API, cadastro (RN10) e página do clube com resumo e elenco com contratos. Partidas e classificação ainda provisórias.
+- **Etapas concluídas:** todas as funcionalidades obrigatórias do enunciado, no backend e no frontend (22/10/2026). Fundação, jogadores, clubes, mercado (compra, venda, histórico, CSV) e Liga (escalação, partidas, classificação).
+- **Backend:** as 19 rotas do enunciado prontas (Liga em 22/10: `GET/PUT /clubs/{id}/lineup`, `POST/GET /matches`, `GET /matches/{id}`, `GET /standings`).
+- **Frontend:** layout do Figma, rotas, cliente HTTP, menu de clubes e **tela de jogadores completa**: lista (busca, filtros, ordenação, paginação, estados) e cadastro, edição, condição e exclusão. **Clubes completos**: lista com as 3 ordenações da API, cadastro (RN10) e página do clube com resumo e elenco com contratos. Venda pela página do clube, abas Elenco/Escalação/Histórico, tela de partidas (nova partida, histórico com filtro, partida com os 6 duelos) e classificação (22/10).
 - **Mercado (Etapa 6, numeração do usuário em 19/10):**
   - 6.1 (compra no backend): já estava implementada desde 18/10; foi revisada contra o prompt em 19/10 e ganhou testes de concorrência, rollback e reflexo nas consultas.
   - 6.2 (venda no backend): também já implementada em 18/10; revisada em 19/10 e ganhou testes de concorrência, rollback e reflexo nas consultas.
   - 6.3 (histórico, `summary` e CSV no backend): ✅ implementada em 20/10.
   - 6.4 (tela de compra): ✅ 21/10.
-  - 6.5 (tela de venda): pendente.
+  - 6.5 (tela de venda): ✅ 22/10.
   - 6.6 (aba Histórico, filtros, resumo e CSV na tela): ✅ 21/10 (pedida antes da 6.5).
-- **Próxima etapa:** a definir pelo usuário: 6.5 (venda no frontend) ou Liga. Aguarda autorização. Pendente de decisão: índice único de contrato ATIVO (ADR-023, proposta).
-- **⚠️ Commits em `frontend/`:** o barema exige ≥10 commits com push em ≥3 dias distintos; 9 commits que alteram `frontend/`, todos de 18/10 e já no `origin` (5.1 a 5.3); a 5.4 ainda não foi commitada (3 commits de código sugeridos → 12). Faltam dias de push: só 18/10 até agora. Prazo: 23/10.
+- **Liga (Etapa 7, sprint final de 22/10):** 7.1 escalação no backend ✅; 7.2 aba Escalação ✅; 7.3 partidas, histórico e classificação no backend ✅; 7.4 telas de partidas e classificação ✅.
+- **Próxima etapa:** entrega (commits, push, hash no e-mail até 23/10 às 20h). Pendente de decisão: índice único de contrato ATIVO (ADR-023, proposta).
+- **Git (auditoria de 22/10):** `backend/` com 11 commits e push confirmado em 18, 19 e 20/10 (eventos do GitHub); `frontend/` com 16 commits e push confirmado em 18 e 19/10; o push de 22/10 (6.4 e 6.6) já está no `origin`, mas ainda não aparecia nos eventos da API do GitHub. Fazer push do trabalho da sprint final em 22 ou 23/10 garante o 3º dia do frontend.
 - **Repositório:** `origin` = `github.com/CaioNunes1/dev1-senai`. Em 18/10, a branch `main` local estava em dia com `origin/main` (último commit `292b86f`, docs da 5.2).
 
 ## Pendências e bloqueios
@@ -48,6 +49,24 @@
 | 5.2 | Listagem de jogadores (F1 Jogadores, parte) | ✅ 18/10 | ver "Etapa 5.2" | ADR-019; 1 bug achado na aplicação real |
 | 5.3 | Operações de jogadores (F1 Jogadores; F2 formulários; F3 mensagens) | ✅ 18/10 | ver "Etapa 5.3" | ADR-020; React Hook Form + Zod instalados |
 | 5.4 | Clubes: lista, cadastro e página do clube (F1 Clubes; F2 formulário; F3) | ✅ 18/10 | ver "Etapa 5.4" | ADR-021; sem bibliotecas novas |
+
+### Sprint final — 6.5 e Liga (7.1–7.4) (22/10/2026)
+
+| Verificação | Resultado |
+| --- | --- |
+| Referência antes de mudar | backend 578 unitários + 274 e2e; frontend 340 testes |
+| 6.5 venda (frontend) | "Vender" em cada jogador do elenco; confirmação (Figma V01) com o contrato e aviso de titular; resultado (V02) com valor de compra, valor de venda, dias restantes, multa (% e valor), lucro, comissão, crédito, contrato e novo caixa da resposta; `refreshAll`; "Ver histórico"; 404/409 com o `message`; falha de rede confere o jogador antes de deixar tentar de novo; o resultado continua na tela se a recarga do clube falhar. 9 testes |
+| 7.1 e 7.3 Liga (backend) | módulo `league`: domínio puro (`formation`, `match-engine`, `standings`), `LineupService`, `MatchesService`, controllers. Sem migration (as tabelas já existiam). 39 unitários com os exemplos oficiais (6 duelos do Águias × Delta, 74 × 0,85 → 63, empate sem gol, as 4 formações, os dois MEI do 1-2-1, classificação com 6 clubes e o exemplo 2.4.3) e 32 e2e (escalação válida nas 4 formações, substituição integral, caixa igual, 10 corpos 400, 404 de clube/jogador/excluído, 409 de outro clube/livre/DOENTE/posições, titular vendido ou DOENTE sai e a formação fica; partida oficial com 201 + Location e os 6 duelos, sem mudar caixa nem escalação, duelos guardados mesmo depois de editar o jogador, 5 corpos 400, 404, 409, rollback com trigger; histórico ordenado com desempate por id, filtro e erros, 404 de partida; classificação zerada e do exemplo 2.4.3) |
+| Mutações (backend) | empate vira gol → 2 falharam; sem a redução de 15% → 5; desempate sem gols marcados → 1; goleiro fora da conta → 1; código restaurado |
+| 7.2 escalação (frontend) | aba Escalação (C06–C11): 4 formações, vagas por setor, opções só da posição, sem DOENTE e sem repetir; troca de formação avisa quem saiu; PUT com os 5 ids; selo Completa/Incompleta/Sem escalação da API; aviso de clube que não pode jogar; "Salvar" desabilitado sem mudança (evita reenvio). 13 testes |
+| 7.4 Liga (frontend) | Partidas (L01/L02/L04): histórico na ordem da API com filtro `?club_id=`, nova partida com validação de campos e o `message` do 409; partida (L03) em `/matches/:id` com placar e os 6 duelos; Classificação (L05) com as 10 colunas na ordem da API. 11 testes |
+| `npm test` (backend) | 29 suítes, 617 testes ok |
+| `npm run test:e2e` (backend) | 5 suítes, 306 testes ok |
+| `npm test` (frontend) | 21 arquivos, 373 testes ok |
+| Lint, formatação, build | ok nas duas pastas; JS do frontend 521,7 kB (159,4 kB gzip); nenhuma dependência nova |
+| Aplicação real | cópia isolada (backend 3001 com `passe_test`, Vite 5174, Chrome headless): 3 clubes e 10 jogadores criados e comprados pela API; escalação dos dois clubes pela tela; Gama sem escalação → 409 com o `message`; partida pela tela = exemplo oficial (1 × 2, 63 × 63 sem gol, 79 × 56 gol), clique duplo → 1 partida; classificação = exemplo 2.4.3; venda do titular pela tela com aviso e os 8 valores; histórico com a VENDA; escalação incompleta; nova partida recusada (409). 1366 × 768 e 375 px sem rolagem horizontal |
+| Docker completo (diferencial) | `backend/Dockerfile`, `frontend/Dockerfile` (imagem pública `node:22-bookworm-slim`), serviços `api` e `web` no `docker-compose.yml`; `docker compose up -d db` continua igual. Validado num projeto isolado (`-p passe-check`, portas 5434/3002/5175): banco novo vazio com migrations, `/players` e `/standings` 200, Swagger 200, CORS da interface, logs por requisição e a lista de jogadores aberta no Chrome. O volume `passe-check_db-data` ficou (apagar com `docker volume rm passe-check_db-data`) |
+| Não validado | Playwright (não configurado); leitor de tela real; Docker numa máquina Ubuntu limpa (validado só no Docker Desktop do Windows) |
 
 ### Etapa 6.6 — histórico, filtros, resumo e CSV na página do clube (21/10/2026)
 
@@ -317,3 +336,4 @@ Limitação conhecida: requisições com JSON malformado são recusadas antes do
 | 20/10/2026 | Claude Code (Claude Opus) | `backend/src/market/` (transactions.controller, transaction-history.service, domain/transaction-history, domain/transactions-csv, dto/transaction-filters, mapper), `test/market.e2e-spec.ts`, ADR-022, ADR-023 | histórico com filtros e `summary`, exportação CSV comparada byte a byte, testes com exemplos oficiais e mutações; análise somente leitura do índice de contrato ativo | em revisão pelo candidato |
 | 21/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/features/market/` (api, loyalty-date, buy-player-schema, BuyPlayerDialog, PurchaseResultDialog), `shared/components/Select.tsx`, `features/players/` (PlayersTable, PlayerActionsMenu, PlayerDialogs, PlayersPage, use-player-list, PlayerSummary), `features/clubs/ClubDetailPage.tsx`, `vite.config.ts`, testes, ADR-024 | leitura dos frames M01–M08; compra com revisão, datas de Brasília independentes do fuso, recuperação de falha de rede; testes com relógio fixo e API falsa com estado; mutações; validação no navegador com o banco de teste | em revisão pelo candidato |
 | 21/10/2026 | Claude Code (Claude Opus) + conector Figma | `frontend/src/shared/components/Tabs.tsx` e `tab-ids.ts`, `shared/api/http-client.ts` (`apiDownload`), `shared/lib/download.ts`, `shared/lib/format.ts` (`formatSignedMoney`), `shared/hooks/use-api-query.ts` (`enabled`), `features/market/` (transaction-filters, use-transactions, TransactionHistoryPanel, TransactionFiltersBar, TransactionsTable, TransactionSummaryBar, signed-tone, api), `features/clubs/ClubDetailPage.tsx`, `test/download-mock.ts`, testes, ADR-025 | leitura dos frames H01–H05, E05 e C05; abas, filtros na URL, resumo da API e download do CSV; testes com API falsa e totais próprios por consulta; mutações; validação no navegador com o banco de teste | em revisão pelo candidato |
+| 22/10/2026 | Claude Code (Claude Opus) + conector Figma | `backend/src/league/` (domain, dto, services, controllers, módulo), `test/league.e2e-spec.ts`; `frontend/src/features/market/` (SellPlayerDialog, SaleResultDialog, ResultRow), `features/league/` (api, lineup-slots, LineupPanel, NewMatchDialog, MatchesPage, MatchDetailPage, StandingsPage), `features/clubs/` (ClubDetailPage, SquadTable), navegação, testes, README, ADR-026 | sprint final autorizada pelo usuário: venda na tela, Liga no backend e no frontend, auditoria e README; testes com os exemplos oficiais; mutações; fluxo integrado no navegador com o banco de teste | em revisão pelo candidato |

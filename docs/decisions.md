@@ -303,3 +303,17 @@ CREATE UNIQUE INDEX "contratos_jogador_ativo_key"
   - Gerar o CSV das linhas da tela: proibido pela etapa e duplicaria a RN18.
   - Expor `Content-Disposition` no CORS do backend: mudaria o backend sem necessidade.
 - **Consequências:** um pedido a mais por página de clube (o histórico sem filtro), que também alimenta a contagem da aba. O arquivo baixado não usa o nome sugerido pelo backend (`transacoes-clube-{id}.csv`).
+
+## ADR-026 — Liga: domínio puro, travas da partida, duelos gravados e telas guiadas pela API
+
+- **Status:** Aceita (22/10/2026, sprint final)
+- **Contexto:** RN19–RN21 e F12–F14 precisavam ficar prontos no mesmo dia, sem migration (as tabelas `escalacoes`, `partidas` e `duelos_partida` já existiam desde a Etapa 2) e sem duplicar regras.
+- **Decisão:**
+  1. **Domínio puro:** `formation.ts` (setores de cada formação), `match-engine.ts` (titulares na ordem do elenco, 6 duelos da tabela oficial, 15% com o arredondamento comum, gol só com ataque maior) e `standings.ts` (pontos, saldo, gols marcados, nome pela ordem alfabética do enunciado e id). Os testes usam os exemplos oficiais como referência independente.
+  2. **Escalação:** `PUT` numa transação. Ordem: clube (404), jogadores travados por id (404), depois elenco, DOENTE e formação (409). Substitui as vagas e grava a formação no clube. A saída do titular (venda, DOENTE) continua em `removeFromLineup`, na transação de quem a dispara.
+  3. **Partida:** trava os dois clubes (ordem de id) para uma venda simultânea não tirar um titular no meio; confere as duas escalações (409); grava a partida e os 6 duelos com nomes, posições, condições, atributos e valores do momento. As consultas leem só o que foi gravado.
+  4. **Frontend:** a página do clube consulta a escalação uma vez (aba e aviso de titular na venda). A aba monta as vagas pela formação e só oferece jogadores da posição, sem DOENTE e sem repetir; "Salvar" fica desabilitado quando nada mudou desde a última escalação salva, o que também evita reenvio por clique duplo. Partida em `/matches/:id`; nova partida só confere os campos (os dois clubes, diferentes) e mostra o 409 de escalação incompleta.
+  5. **Venda:** o resultado fica acima dos estados de carregamento da página, para não sumir se a recarga do clube falhar.
+- **Alternativas:** cálculo da partida no service (misturaria regra e banco); bloquear na tela o clube sem escalação (o enunciado pede mostrar o `message` do 409); desenhar o campo com os jogadores (opcional do mockup, deixado de fora pelo prazo).
+- **Consequências:** um pedido a mais por página de clube (a escalação). Os opcionais do mockup da Liga ficam listados no README.
+- **Docker completo (complemento da ADR-011):** `docker compose up -d --build` sobe banco, API (aplica as migrations ao iniciar) e interface (build servido por `vite preview`), com imagens `node:22-bookworm-slim` (o Prisma precisa do OpenSSL). A origem da API é fixada no build da interface (`VITE_API_URL`). O caminho principal do README continua sendo o banco em Docker e o Node local.

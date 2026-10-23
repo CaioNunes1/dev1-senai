@@ -82,10 +82,10 @@ Heading/Página mobile (20/28) não foi criado (telas mobile fora do escopo).
 | `/clubs` | C01 `54:138539` lista · C02 `54:138880` novo · C03 `54:139250` recusado · C04 `54:139627` criado · C09 `54:140889` vazia | lista ordenável (nome, patrimônio) + criação [O] | F1 Clubes, F3 | 5.4 |
 | `/clubs/:clubId` — Elenco | C05 `54:139956`; E04 `54:149172` clube inexistente | caixa, valor do elenco, patrimônio; elenco na ordem da API com contrato [O] | F1 Clubes | 5.4 |
 | `/clubs/:clubId` — Venda | V01 `54:144967` … V05 `75:167030` | confirmação e resultado da venda [O] | F1 Venda | venda (frontend) |
-| `/clubs/:clubId` — Escalação | C06 `60:157006`, C07 `60:158030`, C08 `75:160001`, C10 `75:160523`, C11 `75:163024` | formação + titular por vaga, aviso de incompleta [O]; campo "Em campo" [M] | F1 Liga | liga |
+| `/clubs/:clubId` — Escalação | C06 `60:157006`, C07 `60:158030`, C08 `75:160001`, C10 `75:160523`, C11 `75:163024` | formação + titular por vaga, aviso de incompleta [O]; campo "Em campo" [M] | F1 Liga | 7.2 |
 | `/clubs/:clubId` — Histórico | H01 `54:146719` … H05 `75:159643`; E05 `54:149306` | tabela, filtros, `summary`, CSV [O] | F1 Histórico | 6.6 |
-| `/matches` | L01 `54:149535` histórico · L02 `54:149914` nova · L03 `60:158515` duelos · L04 `54:150565` incompleta; E06 `54:151232` | jogar, placar + 6 duelos, histórico com filtro [O]; campo com jogadores [M] | F1 Liga | liga |
-| `/standings` | L05 `54:150880` | tabela na ordem da API [O] | F1 Liga | liga |
+| `/matches` | L01 `54:149535` histórico · L02 `54:149914` nova · L03 `60:158515` duelos · L04 `54:150565` incompleta; E06 `54:151232` | jogar, placar + 6 duelos, histórico com filtro [O]; campo com jogadores [M] | F1 Liga | 7.4 |
+| `/standings` | L05 `54:150880` | tabela na ordem da API [O] | F1 Liga | 7.4 |
 | estados | E01 `54:148336` carregando · E02 `54:148765` sem resultados · E03 `54:148977` erro · E07 `75:163564` estados das 6 listas | carregamento, vazio e erro nas 6 listas [O] | F3 | em cada tela |
 
 Elementos do mockup tratados como [M] e ainda não implementados: contadores do menu (Jogadores 23, Clubes 6, Partidas 2), botão "+" de novo clube na sidebar, cartão "Liga Fictícia 2026 / Última partida" no rodapé da sidebar (depende dos endpoints da liga), busca ⌘K e alternância de tema citadas na descrição do componente Sidebar (não aparecem nos frames), detalhes do jogador (J12).
@@ -173,7 +173,7 @@ Frames consultados: H01 `54:146719` (histórico completo, abas), H02 `54:147270`
 | Elemento | Figma | Implementação | Origem |
 | --- | --- | --- | --- |
 | Abas | Elenco 6 · Escalação · Histórico 10, sublinhado na ativa | `Tabs` (padrão WAI-ARIA: setas, Home, End); contagem do elenco e do histórico sem filtro; aba e filtros na URL (`?tab=history&type=VENDA&player_id=2`), então outro clube pelo menu começa sem filtros; abaixo de 640 px os ícones das abas somem para caberem em 375 px | [O] + [D] |
-| Escalação | aba com conteúdo (C06) | desabilitada (`aria-disabled`), com "Em breve" e o motivo no `title`; nenhum pedido nem tela de mentira (etapa da Liga) | [D] (prompt) |
+| Escalação | aba com conteúdo (C06) | implementada na 7.2 (§3.6) | [O] |
 | Tabela | Data e hora, Tipo, Jogador, Valor, Taxa ou comissão, Multa, Lucro, Variação do caixa | as 8 colunas na ordem da API; data e hora em Brasília; badge Compra (outline, carrinho) e Venda (secundário, mão com moedas); nome do momento (`player_name`); lucro nulo "–" (leitor de tela: "Não se aplica"); lucro e variação com sinal e cor (verde crédito, vermelho débito) | [O] RN17 |
 | Tipo | duas caixas marcáveis | as duas marcadas = todas (sem `type` na URL da API); a última marcada fica desabilitada | [O] |
 | Jogador | "Jogador: todos" / "Jogador: Meia Lua" | `FilterSelect` com "Jogador" quando vazio; opções tiradas do histórico sem filtro (inclui vendidos e excluídos; nome da transação mais recente; nomes iguais com o id) | [O] |
@@ -183,6 +183,20 @@ Frames consultados: H01 `54:146719` (histórico completo, abas), H02 `54:147270`
 | Vazio | H04: "Nenhuma transação ainda" + totais zerados | igual; com filtros, "Nenhuma transação com esses filtros" + "Limpar filtros" e os totais zerados da API | [O] F3 |
 | Filtro recusado | H05: alerta "O filtro foi recusado" + `message` | igual (400 e 404 com filtro ativo); sem tabela e sem totais | [O] |
 | Erro | E05: card de erro + "Tentar de novo" | `DataTable` com o `message`; totais e exportação indisponíveis até carregar | [O] F3 |
+
+### 3.6 Venda, escalação, partidas e classificação (sprint final, 22/10/2026)
+
+Frames consultados: V01 `54:144967`, V02 `54:145529`, C06 `60:157006`, C11 `75:163024`, L01 `54:149535`, L03 `60:158515`.
+
+| Elemento | Figma | Implementação | Origem |
+| --- | --- | --- | --- |
+| Vender | V01: confirmação com aviso de titular, jogador, contrato e nota da multa | igual; a contagem de titular vem de `GET /clubs/{id}/lineup` | [O] F08 |
+| Venda concluída | V02: 8 valores, contrato, novo caixa, "Ver histórico" | igual, com os números do 200; "Ver histórico" abre a aba | [O] F08 |
+| Escalação | C06: formação em 4 opções, tabela de vagas, aviso de mal condicionado, selo Completa | igual; "Em campo" e "Reservas" [M] não implementados | [O] F12 |
+| Incompleta | C11: alerta "não pode jogar", vaga vazia | igual, com os titulares que sobraram | [O] F12 |
+| Partidas | L01: histórico, filtro por clube, "Nova partida" | igual; "Última partida" [M] não implementada | [O] F14 |
+| Partida | L03: placar, formações, 6 duelos agrupados por quem ataca | igual, em `/matches/:id`; campo com os jogadores [M] não implementado | [O] F13 |
+| Classificação | L05 | 10 colunas na ordem da API; "Últimas partidas" [M] não implementado | [O] F14 |
 
 ## 4. Componentes
 
